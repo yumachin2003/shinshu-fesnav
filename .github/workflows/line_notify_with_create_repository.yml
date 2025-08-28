@@ -48,12 +48,13 @@ jobs:
                       "layout": "horizontal",
                       "contents": [
                         {
-                          "type": "box", # 📤を囲むボックス
+                          "type": "box",
                           "layout": "vertical",
                           "contents": [
                             {
                               "type": "text",
                               "text": "📤",
+                              "color": "#d0d7e0",
                               "offsetTop": "2px"
                             }
                           ],
@@ -61,7 +62,7 @@ jobs:
                           "width": "20px"
                         },
                         {
-                          "type": "box", # コミット情報側のボックス
+                          "type": "box",
                           "layout": "vertical",
                           "contents": [
                             {
@@ -113,12 +114,6 @@ jobs:
                         {
                           "type": "separator"
                         },
-                      ]
-                    },
-                    "footer": {
-                      "type": "box",
-                      "layout": "vertical",
-                      "contents": [
                         {
                           "type": "text",
                           "text": ("🧑‍💻 変更者: " + $author),
@@ -126,7 +121,12 @@ jobs:
                           "color": "#666666",
                           "margin": "md"
                         }
-                      ],
+                      ]
+                    },
+                    "footer": {
+                      "type": "box",
+                      "layout": "vertical",
+                      "contents": [],
                       "alignItems": "flex-end",
                       "backgroundColor": "#F3F3F3"
                     }
