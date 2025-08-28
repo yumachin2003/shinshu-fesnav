@@ -39,41 +39,62 @@ jobs:
                   "type": "bubble",
                   "header": {
                     "type": "box",
-                    "layout": "vertical",
+                    "layout": "horizontal",
                     "contents": [
                       {
                         "type": "text",
-                        "text": "新しいコミットがプッシュされました",
-                        "weight": "bold",
+                        "text": "📤",
                         "size": "sm",
-                        "color": "#d0d7e0"
+                        "flex": 0, # アイコンが幅を取りすぎないようにする
+                        "offsetTop": "2px"
                       },
                       {
-                        "type": "text",
-                        "text": $sha,
-                        "color": "#666666",
-                        "size": "xs",
-                        "margin": "sm"
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [
+                          {
+                            "type": "text",
+                            "text": $title,
+                            "color": "#d0d7e0",
+                            "action": {
+                              "type": "uri",
+                              "label": "action",
+                              "uri": $url
+                            },
+                            "wrap": true,
+                            "decoration": "underline"
+                          },
+                          {
+                            "type": "text",
+                            "wrap": true,
+                            "text": $number,
+                            "color": "#666666"
+                          }
+                        ]
                       }
                     ],
                     "backgroundColor": "#141c21",
-                    "paddingAll": "md"
+                    "alignItems": "flex-start",
+                    "spacing": "md"
                   },
                   "body": {
                     "type": "box",
                     "layout": "vertical",
                     "contents": [
                       {
-                        "type": "text",
-                        "text": $message,
-                        "wrap": true,
-                        "size": "sm",
-                        "color": "#666666",
-                        "action": {
-                            "type": "uri",
-                            "uri": $url
-                        },
-                        "decoration": "underline"
+                        "type": "box",
+                        "layout": "vertical",
+                        "margin": "md",
+                        "spacing": "none",
+                        "contents": [
+                          {
+                            "type": "text",
+                            "text": $body,
+                            "wrap": true,
+                            "color": "#666666",
+                            "size": "sm"
+                          }
+                        ]
                       }
                     ]
                   },
