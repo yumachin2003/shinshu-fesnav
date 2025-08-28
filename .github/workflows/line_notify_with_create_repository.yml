@@ -59,6 +59,10 @@ jobs:
                         {
                           "type": "text",
                             "text": "📤",
+                            "width": "16px",
+                            "height": "16px",
+                            "spacing": "none",
+                            "margin": "none",
                             "color": "#d0d7e0",
                         },
                         {
@@ -69,6 +73,7 @@ jobs:
                               "type": "text",
                               "text": $message,
                               "color": "#d0d7e0",
+                              "wrap": true,
                               "action": {
                                   "type": "uri",
                                   "label": "action",
