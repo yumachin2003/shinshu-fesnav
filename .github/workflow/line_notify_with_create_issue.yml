@@ -23,7 +23,7 @@ jobs:
           issue_author="Created by: $ISSUE_AUTHOR"
 
           payload=$(jq -n --arg title "$ISSUE_TITLE" --arg body "$ISSUE_BODY" --arg number "$issue_number" --arg url "$ISSUE_URL" --arg author "$issue_author" '{
-            "to": "C3b848f3f63653016a2b6a9f469f7f416",
+            "to": ${{ secrets.GROUP_ID }},
             "messages": [
               {
                 "type":"flex",
