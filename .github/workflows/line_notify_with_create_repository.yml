@@ -10,31 +10,41 @@ jobs:
   notify_on_commit:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      
       - name: Install jq
         run: sudo apt-get install jq
         
-      - name: Call API on push
+      - name: Get commit diff and prepare payload
+        id: prepare_payload
         env:
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           COMMIT_URL: ${{ github.event.head_commit.url }}
           COMMIT_AUTHOR: ${{ github.event.head_commit.author.name }}
           COMMIT_SHA: ${{ github.event.after }}
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_DATE: ${{ github.event.head_commit.timestamp }}
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
-          # コミットSHAを最初の7文字に短縮
-          short_sha=$(echo "$COMMIT_SHA" | cut -c1-7)
+          # 変更されたファイルの一覧を取得
+          changed_files=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }} | head -n 5)
           
-          commit_author="Committed by: $COMMIT_AUTHOR"
-          
-          # GitHubリポジトリのURLを修正してください
-          commit_url="https://github.com/yumachin2003/shinshu-fesnav/commit/$COMMIT_SHA"
+          # 差分情報をjqに渡せるように整形
+          if [ -z "$changed_files" ]; then
+            file_list="変更なし"
+          else
+            file_list=$(echo "$changed_files" | jq -R -s -c 'split("\n") | map(select(length > 0)) | join("\n")' | sed 's/^"//; s/"$//' | sed 's/\\n/\n/g')
+          fi
 
-          payload=$(jq -n --arg message "$COMMIT_MESSAGE" --arg author "$commit_author" --arg url "$commit_url" --arg sha "$short_sha" '{
+          # Flex MessageのJSONペイロードを作成
+          payload=$(jq -n --arg message "$COMMIT_MESSAGE" --arg author "$COMMIT_AUTHOR" --arg url "$COMMIT_URL" --arg sha "$COMMIT_SHA" --arg date "$COMMIT_DATE" --arg branch "$BRANCH_NAME" --arg file_list "$file_list" '{
             "to": "${{ secrets.GROUP_ID }}",
             "messages": [
               {
-                "type":"flex",
-                "altText":"新しいコミットがプッシュされました。",
+                "type": "flex",
+                "altText": "新しいコミットがプッシュされました。",
                 "contents": {
                   "type": "bubble",
                   "header": {
@@ -42,11 +52,16 @@ jobs:
                     "layout": "horizontal",
                     "contents": [
                       {
-                        "type": "text",
-                        "text": "📤",
-                        "weight": "bold",
-                        "size": "sm",
-                        "flex": 0
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [],
+                        "cornerRadius": "5000px",
+                        "width": "16px",
+                        "height": "16px",
+                        "spacing": "none",
+                        "margin": "none",
+                        "backgroundColor": "#57ab5b",
+                        "offsetTop": "2px"
                       },
                       {
                         "type": "box",
@@ -54,17 +69,21 @@ jobs:
                         "contents": [
                           {
                             "type": "text",
-                            "text": "Push Commit Notification", # タイトルを追加
-                            "weight": "bold",
+                            "text": $message,
                             "color": "#d0d7e0",
-                            "wrap": true
+                            "wrap": true,
+                            "action": {
+                                "type": "uri",
+                                "label": "action",
+                                "uri": $url
+                            },
+                            "decoration": "underline"
                           },
                           {
                             "type": "text",
-                            "text": $sha, # コミットSHAを追加
-                            "color": "#666666",
-                            "size": "xs",
-                            "margin": "sm"
+                            "wrap": true,
+                            "text": ($sha | cut -c1-7),
+                            "color": "#666666"
                           }
                         ]
                       }
@@ -85,15 +104,35 @@ jobs:
                         "contents": [
                           {
                             "type": "text",
-                            "text": $message, # コミットメッセージを表示
+                            "text": "📅 日時: " + ($date | fromdateiso8601 | strftime("%Y-%m-%d %H:%M:%S")),
                             "wrap": true,
                             "color": "#666666",
+                            "size": "sm"
+                          },
+                          {
+                            "type": "text",
+                            "text": "🌳 ブランチ: " + $branch,
+                            "wrap": true,
+                            "color": "#666666",
+                            "size": "sm"
+                          },
+                          {
+                            "type": "separator"
+                          },
+                          {
+                            "type": "text",
+                            "text": "✏️ 変更されたファイル:",
+                            "weight": "bold",
+                            "color": "#666666",
                             "size": "sm",
-                            "action": {
-                                "type": "uri",
-                                "uri": $url
-                            },
-                            "decoration": "underline"
+                            "margin": "md"
+                          },
+                          {
+                            "type": "text",
+                            "text": $file_list,
+                            "wrap": true,
+                            "color": "#666666",
+                            "size": "sm"
                           }
                         ]
                       }
@@ -105,7 +144,7 @@ jobs:
                     "contents": [
                       {
                         "type": "text",
-                        "text": $author, # コミット作成者を表示
+                        "text": "🧑‍💻 作成者: " + $author,
                         "size": "xs",
                         "color": "#666666"
                       }
@@ -116,9 +155,13 @@ jobs:
                 }
               }
             ]
-          }')
+          }')" >> $GITHUB_OUTPUT
 
+      - name: Call API on push
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        run: |
           curl -v -X POST https://api.line.me/v2/bot/message/push \
           -H 'Content-Type: application/json' \
           -H "Authorization: Bearer $ACCESS_TOKEN" \
-          -d "$payload"
+          -d "${{ steps.prepare_payload.outputs.payload }}"
