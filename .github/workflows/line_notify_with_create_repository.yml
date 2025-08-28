@@ -52,18 +52,28 @@ jobs:
                   "altText": "新しいコミットがプッシュされました。",
                   "contents": {
                     "type": "bubble",
-                    "header": {
+                                        "header": {
                       "type": "box",
                       "layout": "horizontal",
                       "contents": [
                         {
-                          "type": "text",
-                            "text": "📤",
-                            "color": "#d0d7e0",
-                            "offsetTop": "2px"
+                          "type": "box", // 📤を囲むボックス
+                          "layout": "vertical",
+                          "contents": [
+                            {
+                              "type": "text",
+                              "text": "📤",
+                              "color": "#d0d7e0",
+                              "offsetTop": "2px"
+                            }
+                          ],
+                          "flex": 0, // このボックスは内容のサイズに合わせる
+                          "margin": "none", // 外側のマージンをなくす
+                          "paddingAll": "none", // 内側のパディングをなくす
+                          "width": "20px" // 📤の絵文字の幅を明示的に指定するとより正確に調整可能
                         },
                         {
-                          "type": "box",
+                          "type": "box", // コミット情報側のボックス
                           "layout": "vertical",
                           "contents": [
                             {
@@ -84,13 +94,18 @@ jobs:
                               "text": ($sha | .[0:7]),
                               "color": "#666666"
                             }
-                          ]
+                          ],
+                          "flex": 1, // 残りのスペースを埋める
+                          "margin": "none", // 外側のマージンをなくす
+                          "paddingAll": "none" // 内側のパディングをなくす
                         }
                       ],
                       "backgroundColor": "#141c21",
                       "alignItems": "flex-start",
-                      "spacing": "md"
+                      "spacing": "none", // ここもnoneにすることで、2つのbox間の隙間をなくす
+                      "paddingAll": "md" // header全体のパディングは残しておく
                     },
+
                     "body": {
                       "type": "box",
                       "layout": "vertical",
