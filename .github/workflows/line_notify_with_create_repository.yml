@@ -21,21 +21,28 @@ jobs:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           COMMIT_DATE: ${{ github.event.head_commit.timestamp }}
           BRANCH_NAME: ${{ github.ref_name }}
+          GITHUB_EVENT: ${{ toJSON(github.event) }}
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
-          # 変更されたファイルの一覧を取得
-          # added, modified, removedのリストを結合して整形
-          changed_files=$(jq -c '[.commits[] | (.added, .modified, .removed) | .[]]' <<< "${{ toJSON(github.event) }}" | jq -s 'flatten | unique | join("\n")')
-
-          # ファイルリストが空の場合は「変更なし」とする
-          if [ -z "$changed_files" ]; then
-            file_list="変更なし"
+          # 変更されたファイルの一覧をJSON配列として取得
+          file_list_json=$(echo "$GITHUB_EVENT" | jq '[.commits[] | .added, .modified, .removed] | flatten | unique | join("\n")')
+          
+          # 空の場合は「変更なし」とする
+          if [ "$file_list_json" == '""' ]; then
+            file_list_text="変更なし"
           else
-            file_list=$changed_files
+            file_list_text=$(echo "$file_list_json" | sed 's/^"//; s/"$//')
           fi
 
           # Flex MessageのJSONペイロードを作成
-          payload=$(jq -n --arg message "$COMMIT_MESSAGE" --arg author "$COMMIT_AUTHOR" --arg url "$COMMIT_URL" --arg sha "$COMMIT_SHA" --arg date "$COMMIT_DATE" --arg branch "$BRANCH_NAME" --arg file_list "$file_list" '{
+          payload=$(jq -n \
+            --arg message "$COMMIT_MESSAGE" \
+            --arg author "$COMMIT_AUTHOR" \
+            --arg url "$COMMIT_URL" \
+            --arg sha "$COMMIT_SHA" \
+            --arg date "$COMMIT_DATE" \
+            --arg branch "$BRANCH_NAME" \
+            --arg file_list "$file_list_text" '{
             "to": "${{ secrets.GROUP_ID }}",
             "messages": [
               {
