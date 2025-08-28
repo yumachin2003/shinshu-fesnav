@@ -109,7 +109,7 @@ jobs:
                     "contents": [
                       {
                         "type": "text",
-                        "text": "🌳 ブランチ: " + $branch,
+                        "text": ("🌳 ブランチ: " + $branch),
                         "wrap": true,
                         "color": "#666666",
                         "size": "sm"
