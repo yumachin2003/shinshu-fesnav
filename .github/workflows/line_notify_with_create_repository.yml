@@ -57,15 +57,10 @@ jobs:
                       "layout": "horizontal",
                       "contents": [
                         {
-                          "type": "box",
-                          "layout": "vertical",
-                          "contents": [],
-                          "cornerRadius": "5000px",
-                          "width": "16px",
-                          "height": "16px",
-                          "spacing": "none",
-                          "margin": "none",
-                          "backgroundColor": "#57ab5b",
+                          "type": "text",
+                            "text": "📤",
+                            "color": "#d0d7e0",
+                            "wrap": true,
                           "offsetTop": "2px"
                         },
                         {
@@ -109,22 +104,12 @@ jobs:
                           "size": "sm"
                         },
                         {
-                          "type": "separator"
-                        },
-                        {
                           "type": "text",
-                          "text": "✏️ 変更されたファイル:",
+                          "text": ("✏️ 変更内容:" + $message,
                           "weight": "bold",
                           "color": "#666666",
                           "size": "sm",
-                          "margin": "md"
-                        },
-                        {
-                          "type": "text",
-                          "text": $file_list,
-                          "wrap": true,
-                          "color": "#666666",
-                          "size": "sm"
+                          "margin": "sm"
                         }
                       ]
                     },
