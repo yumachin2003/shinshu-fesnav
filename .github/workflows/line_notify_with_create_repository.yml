@@ -33,7 +33,7 @@ jobs:
             URL=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.url')
             SHA=$(echo "$GITHUB_EVENT" | jq -r '.after')
             BRANCH=$(echo "$GITHUB_EVENT" | jq -r '.ref | sub("refs/heads/"; "")')
-            FILE_LIST=$(echo "$GITHUB_EVENT" | jq '[.commits[].added, .commits[].modified, .commits[].removed] | flatten | unique | join("\n")' | sed 's/^"//; s/"$//')
+            FILE_LIST=$(echo "$GITHUB_EVENT" | jq '[.commits[].added, .commits[].modified, .commits[].removed] | flatten | unique | join("\n")' | sed 's/^"#; s/"$#')
           fi
 
           # jqコマンドでpayloadを生成する部分はそのまま
@@ -52,12 +52,12 @@ jobs:
                   "altText": "新しいコミットがプッシュされました。",
                   "contents": {
                     "type": "bubble",
-                                        "header": {
+                      "header": {
                       "type": "box",
                       "layout": "horizontal",
                       "contents": [
                         {
-                          "type": "box", // 📤を囲むボックス
+                          "type": "box", # 📤を囲むボックス
                           "layout": "vertical",
                           "contents": [
                             {
@@ -67,13 +67,13 @@ jobs:
                               "offsetTop": "2px"
                             }
                           ],
-                          "flex": 0, // このボックスは内容のサイズに合わせる
-                          "margin": "none", // 外側のマージンをなくす
-                          "paddingAll": "none", // 内側のパディングをなくす
-                          "width": "20px" // 📤の絵文字の幅を明示的に指定するとより正確に調整可能
+                          "flex": 0, # このボックスは内容のサイズに合わせる
+                          "margin": "none", # 外側のマージンをなくす
+                          "paddingAll": "none", # 内側のパディングをなくす
+                          "width": "20px" # 📤の絵文字の幅を明示的に指定するとより正確に調整可能
                         },
                         {
-                          "type": "box", // コミット情報側のボックス
+                          "type": "box", # コミット情報側のボックス
                           "layout": "vertical",
                           "contents": [
                             {
@@ -95,15 +95,15 @@ jobs:
                               "color": "#666666"
                             }
                           ],
-                          "flex": 1, // 残りのスペースを埋める
-                          "margin": "none", // 外側のマージンをなくす
-                          "paddingAll": "none" // 内側のパディングをなくす
+                          "flex": 1, # 残りのスペースを埋める
+                          "margin": "none", # 外側のマージンをなくす
+                          "paddingAll": "none" # 内側のパディングをなくす
                         }
                       ],
                       "backgroundColor": "#141c21",
                       "alignItems": "flex-start",
-                      "spacing": "none", // ここもnoneにすることで、2つのbox間の隙間をなくす
-                      "paddingAll": "md" // header全体のパディングは残しておく
+                      "spacing": "none", # ここもnoneにすることで、2つのbox間の隙間をなくす
+                      "paddingAll": "md" # header全体のパディングは残しておく
                     },
 
                     "body": {
@@ -147,7 +147,7 @@ jobs:
           )
 
           # curlコマンドを独立させる
-          curl -v -X POST https://api.line.me/v2/bot/message/push \
+          curl -v -X POST https:#api.line.me/v2/bot/message/push \
           -H 'Content-Type: application/json' \
           -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN }}" \
           -d "$payload"
