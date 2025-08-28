@@ -69,7 +69,6 @@ jobs:
                               "type": "text",
                               "text": $message,
                               "color": "#d0d7e0",
-                              "wrap": true,
                               "action": {
                                   "type": "uri",
                                   "label": "action",
