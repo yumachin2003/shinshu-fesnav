@@ -43,8 +43,7 @@ jobs:
             --arg url "$URL" \
             --arg sha "$SHA" \
             --arg branch "$BRANCH" \
-            --arg file_list "$FILE_LIST" 
-            '
+            --arg file_list "$FILE_LIST" '
             {
               "to": "${{ secrets.GROUP_ID }}",
               "messages": [
