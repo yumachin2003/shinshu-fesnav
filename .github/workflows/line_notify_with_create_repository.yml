@@ -33,121 +33,121 @@ jobs:
             URL=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.url')
             SHA=$(echo "$GITHUB_EVENT" | jq -r '.after')
             BRANCH=$(echo "$GITHUB_EVENT" | jq -r '.ref | sub("refs/heads/"; "")')
-            # 変更されたファイルをユニークなリストとして取得
             FILE_LIST=$(echo "$GITHUB_EVENT" | jq '[.commits[].added, .commits[].modified, .commits[].removed] | flatten | unique | join("\n")' | sed 's/^"//; s/"$//')
           fi
 
-          # Flex MessageのJSONペイロードを作成
+          # jqコマンドをヒアドキュメントで書き換えることで、複数行のJSONを安全に扱える
           payload=$(jq -n \
             --arg message "$MESSAGE" \
             --arg author "$AUTHOR" \
             --arg url "$URL" \
             --arg sha "$SHA" \
             --arg branch "$BRANCH" \
-            --arg file_list "$FILE_LIST" '{
-            "to": "${{ secrets.GROUP_ID }}",
-            "messages": [
-              {
-                "type": "flex",
-                "altText": "新しいコミットがプッシュされました。",
-                "contents": {
-                  "type": "bubble",
-                  "header": {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "contents": [
-                      {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [],
-                        "cornerRadius": "5000px",
-                        "width": "16px",
-                        "height": "16px",
-                        "spacing": "none",
-                        "margin": "none",
-                        "backgroundColor": "#57ab5b",
-                        "offsetTop": "2px"
-                      },
-                      {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                          {
-                            "type": "text",
-                            "text": $message,
-                            "color": "#d0d7e0",
-                            "wrap": true,
-                            "action": {
-                                "type": "uri",
-                                "label": "action",
-                                "uri": $url
+            --arg file_list "$FILE_LIST" '
+            {
+              "to": "${{ secrets.GROUP_ID }}",
+              "messages": [
+                {
+                  "type": "flex",
+                  "altText": "新しいコミットがプッシュされました。",
+                  "contents": {
+                    "type": "bubble",
+                    "header": {
+                      "type": "box",
+                      "layout": "horizontal",
+                      "contents": [
+                        {
+                          "type": "box",
+                          "layout": "vertical",
+                          "contents": [],
+                          "cornerRadius": "5000px",
+                          "width": "16px",
+                          "height": "16px",
+                          "spacing": "none",
+                          "margin": "none",
+                          "backgroundColor": "#57ab5b",
+                          "offsetTop": "2px"
+                        },
+                        {
+                          "type": "box",
+                          "layout": "vertical",
+                          "contents": [
+                            {
+                              "type": "text",
+                              "text": $message,
+                              "color": "#d0d7e0",
+                              "wrap": true,
+                              "action": {
+                                  "type": "uri",
+                                  "label": "action",
+                                  "uri": $url
+                              },
+                              "decoration": "underline"
                             },
-                            "decoration": "underline"
-                          },
-                          {
-                            "type": "text",
-                            "wrap": true,
-                            "text": ($sha | .[0:7]),
-                            "color": "#666666"
-                          }
-                        ]
-                      }
-                    ],
-                    "backgroundColor": "#141c21",
-                    "alignItems": "flex-start",
-                    "spacing": "md"
-                  },
-                  "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                      {
-                        "type": "text",
-                        "text": ("🌳 ブランチ: " + $branch),
-                        "wrap": true,
-                        "color": "#666666",
-                        "size": "sm"
-                      },
-                      {
-                        "type": "separator"
-                      },
-                      {
-                        "type": "text",
-                        "text": "✏️ 変更されたファイル:",
-                        "weight": "bold",
-                        "color": "#666666",
-                        "size": "sm",
-                        "margin": "md"
-                      },
-                      {
-                        "type": "text",
-                        "text": $file_list,
-                        "wrap": true,
-                        "color": "#666666",
-                        "size": "sm"
-                      }
-                    ]
-                  },
-                  "footer": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                      {
-                        "type": "text",
-                        "text": ("🧑‍💻 作成者: " + $author),
-                        "size": "xs",
-                        "color": "#666666"
-                      }
-                    ],
-                    "alignItems": "flex-end",
-                    "backgroundColor": "#F3F3F3"
+                            {
+                              "type": "text",
+                              "wrap": true,
+                              "text": ($sha | .[0:7]),
+                              "color": "#666666"
+                            }
+                          ]
+                        }
+                      ],
+                      "backgroundColor": "#141c21",
+                      "alignItems": "flex-start",
+                      "spacing": "md"
+                    },
+                    "body": {
+                      "type": "box",
+                      "layout": "vertical",
+                      "contents": [
+                        {
+                          "type": "text",
+                          "text": ("🌳 ブランチ: " + $branch),
+                          "wrap": true,
+                          "color": "#666666",
+                          "size": "sm"
+                        },
+                        {
+                          "type": "separator"
+                        },
+                        {
+                          "type": "text",
+                          "text": "✏️ 変更されたファイル:",
+                          "weight": "bold",
+                          "color": "#666666",
+                          "size": "sm",
+                          "margin": "md"
+                        },
+                        {
+                          "type": "text",
+                          "text": $file_list,
+                          "wrap": true,
+                          "color": "#666666",
+                          "size": "sm"
+                        }
+                      ]
+                    },
+                    "footer": {
+                      "type": "box",
+                      "layout": "vertical",
+                      "contents": [
+                        {
+                          "type": "text",
+                          "text": ("🧑‍💻 作成者: " + $author),
+                          "size": "xs",
+                          "color": "#666666"
+                        }
+                      ],
+                      "alignItems": "flex-end",
+                      "backgroundColor": "#F3F3F3"
+                    }
                   }
                 }
-              }
-            ]
-          }')
+              ]
+            }'
 
           curl -v -X POST https://api.line.me/v2/bot/message/push \
           -H 'Content-Type: application/json' \
-          -H "Authorization: Bearer $ACCESS_TOKEN \
+          -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN }}" \
           -d "$payload"
