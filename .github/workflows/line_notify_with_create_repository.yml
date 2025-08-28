@@ -59,9 +59,8 @@ jobs:
                         {
                           "type": "text",
                             "text": "📤",
-                            "spacing": "none",
-                            "margin": "none",
                             "color": "#d0d7e0",
+                            "offsetTop": "2px"
                         },
                         {
                           "type": "box",
