@@ -24,17 +24,16 @@ jobs:
           GITHUB_EVENT: ${{ toJSON(github.event) }}
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
-          # 変更されたファイルの一覧を文字列として取得
-          # ヒアドキュメントを使ってjqにGitHubイベントのJSONを渡す
-          file_list_json=$(jq -r '[.commits[] | (.added, .modified, .removed) | .[]] | flatten | unique | join("\n")' <<< "$GITHUB_EVENT")
-          
-          # 空の場合は「変更なし」とする
-          if [ -z "$file_list_json" ]; then
-            file_list_text="変更なし"
+          # 変更されたファイルの一覧を取得
+          # `commits`配列がnullではないかを確認してからjqを実行
+          if [[ "${{ github.event.commits }}" == "" ]]; then
+            file_list="変更なし"
           else
-            file_list_text=$(echo "$file_list_json" | sed 's/^"//; s/"$//')
+            file_list=$(echo "$GITHUB_EVENT" | jq '[.commits[] | .added, .modified, .removed] | flatten | unique | join("\n")')
+            # jqが出力する二重引用符を削除
+            file_list=$(echo "$file_list" | sed 's/^"//; s/"$//')
           fi
-
+          
           # Flex MessageのJSONペイロードを作成
           payload=$(jq -n \
             --arg message "$COMMIT_MESSAGE" \
@@ -43,7 +42,7 @@ jobs:
             --arg sha "$COMMIT_SHA" \
             --arg date "$COMMIT_DATE" \
             --arg branch "$BRANCH_NAME" \
-            --arg file_list "$file_list_text" '{
+            --arg file_list "$file_list" '{
             "to": "${{ secrets.GROUP_ID }}",
             "messages": [
               {
