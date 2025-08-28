@@ -35,7 +35,7 @@ jobs:
           if [ -z "$changed_files" ]; then
             file_list="変更なし"
           else
-            file_list=$(echo "$changed_files" | jq -R -s -c 'split("\n") | map(select(length > 0)) | join("\n")' | sed 's/^"//; s/"$//' | sed 's/\\n/\n/g')
+            file_list=$(echo "$changed_files" | jq -R -s -c 'split("\n") | map(select(length > 0)) | join("\n")')
           fi
 
           # Flex MessageのJSONペイロードを作成
