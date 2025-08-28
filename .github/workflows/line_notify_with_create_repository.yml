@@ -54,13 +54,10 @@ jobs:
                             {
                               "type": "text",
                               "text": "📤",
-                              "color": "#d0d7e0",
                               "offsetTop": "2px"
                             }
                           ],
                           "flex": 0,
-                          "margin": "none",
-                          "paddingAll": "none",
                           "width": "20px"
                         },
                         {
@@ -69,7 +66,7 @@ jobs:
                           "contents": [
                             {
                               "type": "text",
-                              "text": $message,
+                              "text": "リポジトリがプッシュされました",
                               "color": "#d0d7e0",
                               "wrap": true,
                               "action": {
@@ -107,6 +104,7 @@ jobs:
                         },
                         {
                           "type": "text",
+                          "wrap": "true",
                           "text": ("✏️ 変更内容: " + $message),
                           "color": "#666666",
                           "size": "sm",
@@ -115,6 +113,12 @@ jobs:
                         {
                           "type": "separator"
                         },
+                      ]
+                    },
+                    "footer": {
+                      "type": "box",
+                      "layout": "vertical",
+                      "contents": [
                         {
                           "type": "text",
                           "text": ("🧑‍💻 変更者: " + $author),
@@ -122,12 +126,7 @@ jobs:
                           "color": "#666666",
                           "margin": "md"
                         }
-                      ]
-                    },
-                    "footer": {
-                      "type": "box",
-                      "layout": "vertical",
-                      "contents": [],
+                      ],
                       "alignItems": "flex-end",
                       "backgroundColor": "#F3F3F3"
                     }
