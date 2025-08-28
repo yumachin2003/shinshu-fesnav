@@ -24,11 +24,12 @@ jobs:
           GITHUB_EVENT: ${{ toJSON(github.event) }}
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
-          # 変更されたファイルの一覧をJSON配列として取得
-          file_list_json=$(echo "$GITHUB_EVENT" | jq '[.commits[] | .added, .modified, .removed] | flatten | unique | join("\n")')
+          # 変更されたファイルの一覧を文字列として取得
+          # ヒアドキュメントを使ってjqにGitHubイベントのJSONを渡す
+          file_list_json=$(jq -r '[.commits[] | (.added, .modified, .removed) | .[]] | flatten | unique | join("\n")' <<< "$GITHUB_EVENT")
           
           # 空の場合は「変更なし」とする
-          if [ "$file_list_json" == '""' ]; then
+          if [ -z "$file_list_json" ]; then
             file_list_text="変更なし"
           else
             file_list_text=$(echo "$file_list_json" | sed 's/^"//; s/"$//')
