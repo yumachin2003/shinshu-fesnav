@@ -60,7 +60,6 @@ jobs:
                           "type": "text",
                             "text": "📤",
                             "color": "#d0d7e0",
-                            "wrap": true,
                           "offsetTop": "2px"
                         },
                         {
@@ -119,7 +118,7 @@ jobs:
                       "contents": [
                         {
                           "type": "text",
-                          "text": ("🧑‍💻 作成者: " + $author),
+                          "text": ("🧑‍💻 変更者: " + $author),
                           "size": "xs",
                           "color": "#666666"
                         }
