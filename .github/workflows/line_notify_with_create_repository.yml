@@ -27,9 +27,6 @@ jobs:
           # コミットSHAを最初の7文字に短縮
           short_sha=$(echo "$COMMIT_SHA" | cut -c1-7)
           
-          # GitHubリポジトリのURLを修正してください
-          commit_url="https://github.com/yumachin2003/shinshu-fesnav/commit/$COMMIT_SHA"
-
           # Flex MessageのJSONペイロードを作成
           payload=$(jq -n \
             --arg message "$COMMIT_MESSAGE" \
@@ -98,7 +95,6 @@ jobs:
                         "type": "text",
                         "text": ("📅 日時: " + ($date | fromdateiso8601 | strftime("%Y-%m-%d %H:%M:%S"))),
                         "wrap": true,
-                        "wrap": true,
                         "color": "#666666",
                         "size": "sm"
                       },
@@ -122,7 +118,7 @@ jobs:
                       },
                       {
                         "type": "text",
-                        "text": "変更されたファイル一覧は、この設定では取得できません。", # ここに代替メッセージを追加
+                        "text": "変更されたファイル一覧は、この設定では取得できません。",
                         "wrap": true,
                         "color": "#666666",
                         "size": "sm"
