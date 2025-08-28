@@ -60,7 +60,6 @@ jobs:
                           "type": "text",
                             "text": "📤",
                             "color": "#d0d7e0",
-                          "offsetTop": "2px"
                         },
                         {
                           "type": "box",
@@ -104,8 +103,7 @@ jobs:
                         },
                         {
                           "type": "text",
-                          "text": ("✏️ 変更内容:" + $message),
-                          "weight": "bold",
+                          "text": ("✏️ 変更内容: " + $message),
                           "color": "#666666",
                           "size": "sm",
                           "margin": "sm"
