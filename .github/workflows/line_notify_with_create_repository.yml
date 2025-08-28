@@ -35,7 +35,7 @@ jobs:
             --arg message "$COMMIT_MESSAGE" \
             --arg author "$COMMIT_AUTHOR" \
             --arg url "$COMMIT_URL" \
-            --arg sha "$COMMIT_SHA" \
+            --arg sha "$short_sha" \
             --arg date "$COMMIT_DATE" \
             --arg branch "$BRANCH_NAME" '{
             "to": "${{ secrets.GROUP_ID }}",
@@ -80,7 +80,7 @@ jobs:
                           {
                             "type": "text",
                             "wrap": true,
-                            "text": ($sha | cut -c1-7),
+                            "text": $sha,
                             "color": "#666666"
                           }
                         ]
