@@ -17,6 +17,7 @@ jobs:
         id: prepare_payload
         env:
           GITHUB_EVENT: ${{ toJSON(github.event) }}
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
           # コミット情報がnullの場合とそうでない場合で変数を設定
           if [ "$(echo "$GITHUB_EVENT" | jq '.commits')" == "null" ]; then
@@ -148,5 +149,5 @@ jobs:
 
           curl -v -X POST https://api.line.me/v2/bot/message/push \
           -H 'Content-Type: application/json' \
-          -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN }}" \
+          -H "Authorization: Bearer $ACCESS_TOKEN \
           -d "$payload"
