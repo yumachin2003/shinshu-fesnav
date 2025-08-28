@@ -44,9 +44,9 @@ jobs:
                       {
                         "type": "text",
                         "text": "📤",
+                        "weight": "bold",
                         "size": "sm",
-                        "flex": 0, # アイコンが幅を取りすぎないようにする
-                        "offsetTop": "2px"
+                        "flex": 0
                       },
                       {
                         "type": "box",
@@ -54,21 +54,17 @@ jobs:
                         "contents": [
                           {
                             "type": "text",
-                            "text": $title,
+                            "text": "Push Commit Notification", # タイトルを追加
+                            "weight": "bold",
                             "color": "#d0d7e0",
-                            "action": {
-                              "type": "uri",
-                              "label": "action",
-                              "uri": $url
-                            },
-                            "wrap": true,
-                            "decoration": "underline"
+                            "wrap": true
                           },
                           {
                             "type": "text",
-                            "wrap": true,
-                            "text": $number,
-                            "color": "#666666"
+                            "text": $sha, # コミットSHAを追加
+                            "color": "#666666",
+                            "size": "xs",
+                            "margin": "sm"
                           }
                         ]
                       }
@@ -89,10 +85,15 @@ jobs:
                         "contents": [
                           {
                             "type": "text",
-                            "text": $body,
+                            "text": $message, # コミットメッセージを表示
                             "wrap": true,
                             "color": "#666666",
-                            "size": "sm"
+                            "size": "sm",
+                            "action": {
+                                "type": "uri",
+                                "uri": $url
+                            },
+                            "decoration": "underline"
                           }
                         ]
                       }
@@ -104,7 +105,7 @@ jobs:
                     "contents": [
                       {
                         "type": "text",
-                        "text": $author,
+                        "text": $author, # コミット作成者を表示
                         "size": "xs",
                         "color": "#666666"
                       }
