@@ -36,7 +36,7 @@ jobs:
             FILE_LIST=$(echo "$GITHUB_EVENT" | jq '[.commits[].added, .commits[].modified, .commits[].removed] | flatten | unique | join("\n")' | sed 's/^"//; s/"$//')
           fi
 
-          # jqコマンドをヒアドキュメントで書き換えることで、複数行のJSONを安全に扱える
+          # jqコマンドでpayloadを生成する部分はそのまま
           payload=$(jq -n \
             --arg message "$MESSAGE" \
             --arg author "$AUTHOR" \
@@ -147,7 +147,11 @@ jobs:
               ]
             }'
 
+          # curlコマンドを独立させる
           curl -v -X POST https://api.line.me/v2/bot/message/push \
           -H 'Content-Type: application/json' \
           -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN }}" \
           -d "$payload"
+          
+          # payloadの内容を確認したい場合は別のコマンドとして実行する
+          echo "$payload"
