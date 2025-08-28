@@ -96,14 +96,14 @@ jobs:
                     "contents": [
                       {
                         "type": "text",
-                        "text": "📅 日時: " + ($date | fromdateiso8601 | strftime("%Y-%m-%d %H:%M:%S")),
+                        "text": ("📅 日時: " + ($date | fromdateiso8601 | strftime("%Y-%m-%d %H:%M:%S"))),
                         "wrap": true,
                         "color": "#666666",
                         "size": "sm"
                       },
                       {
                         "type": "text",
-                        "text": "🌳 ブランチ: " + $branch,
+                        "text": ("🌳 ブランチ: " + $branch),
                         "wrap": true,
                         "color": "#666666",
                         "size": "sm"
@@ -134,7 +134,7 @@ jobs:
                     "contents": [
                       {
                         "type": "text",
-                        "text": "🧑‍💻 作成者: " + $author,
+                        "text": ("🧑‍💻 作成者: " + $author),
                         "size": "xs",
                         "color": "#666666"
                       }
