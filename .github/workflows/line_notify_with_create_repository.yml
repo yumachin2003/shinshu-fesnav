@@ -148,5 +148,5 @@ jobs:
 
           curl -v -X POST https://api.line.me/v2/bot/message/push \
           -H 'Content-Type: application/json' \
-          -H "Authorization: Bearer ${{ secrets.CHANNEL_ACCESS_TOKEN }}" \
+          -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN }}" \
           -d "$payload"
