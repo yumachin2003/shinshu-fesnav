@@ -10,12 +10,9 @@ jobs:
   notify_on_commit:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
       - name: Install jq
         run: sudo apt-get install jq
-
+        
       - name: Call API on push
         env:
           COMMIT_URL: ${{ github.event.head_commit.url }}
@@ -24,19 +21,23 @@ jobs:
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           COMMIT_DATE: ${{ github.event.head_commit.timestamp }}
           BRANCH_NAME: ${{ github.ref_name }}
+          GITHUB_EVENT: ${{ toJSON(github.event) }}
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
-          # 変更されたファイルリストを取得し、カンマ区切りの文字列に変換
-          file_list=$(git diff --name-only HEAD^ HEAD | tr '\n' ',')
+          # コミットSHAを最初の7文字に短縮
+          short_sha=$(echo "$COMMIT_SHA" | cut -c1-7)
           
+          # GitHubリポジトリのURLを修正してください
+          commit_url="https://github.com/yumachin2003/shinshu-fesnav/commit/$COMMIT_SHA"
+
+          # Flex MessageのJSONペイロードを作成
           payload=$(jq -n \
             --arg message "$COMMIT_MESSAGE" \
             --arg author "$COMMIT_AUTHOR" \
             --arg url "$COMMIT_URL" \
             --arg sha "$COMMIT_SHA" \
             --arg date "$COMMIT_DATE" \
-            --arg branch "$BRANCH_NAME" \
-            --arg file_list "$file_list" '{
+            --arg branch "$BRANCH_NAME" '{
             "to": "${{ secrets.GROUP_ID }}",
             "messages": [
               {
@@ -49,11 +50,16 @@ jobs:
                     "layout": "horizontal",
                     "contents": [
                       {
-                        "type": "text",
-                        "text": "📤",
-                        "weight": "bold",
-                        "size": "sm",
-                        "flex": 0
+                        "type": "box",
+                        "layout": "vertical",
+                        "contents": [],
+                        "cornerRadius": "5000px",
+                        "width": "16px",
+                        "height": "16px",
+                        "spacing": "none",
+                        "margin": "none",
+                        "backgroundColor": "#57ab5b",
+                        "offsetTop": "2px"
                       },
                       {
                         "type": "box",
@@ -62,16 +68,20 @@ jobs:
                           {
                             "type": "text",
                             "text": $message,
-                            "weight": "bold",
                             "color": "#d0d7e0",
-                            "wrap": true
+                            "wrap": true,
+                            "action": {
+                                "type": "uri",
+                                "label": "action",
+                                "uri": $url
+                            },
+                            "decoration": "underline"
                           },
                           {
                             "type": "text",
-                            "text": ($sha | .[0:7]), # コミットSHAを短縮
-                            "color": "#666666",
-                            "size": "xs",
-                            "margin": "sm"
+                            "wrap": true,
+                            "text": ($sha | cut -c1-7),
+                            "color": "#666666"
                           }
                         ]
                       }
@@ -85,44 +95,36 @@ jobs:
                     "layout": "vertical",
                     "contents": [
                       {
-                        "type": "box",
-                        "layout": "vertical",
-                        "margin": "md",
-                        "spacing": "none",
-                        "contents": [
-                          {
-                            "type": "text",
-                            "text": "📅 日時: " + ($date | fromdateiso8601 | strftime("%Y-%m-%d %H:%M:%S")),
-                            "wrap": true,
-                            "color": "#666666",
-                            "size": "sm"
-                          },
-                          {
-                            "type": "text",
-                            "text": "🌳 ブランチ: " + $branch,
-                            "wrap": true,
-                            "color": "#666666",
-                            "size": "sm"
-                          },
-                          {
-                            "type": "separator"
-                          },
-                          {
-                            "type": "text",
-                            "text": "✏️ 変更されたファイル:",
-                            "weight": "bold",
-                            "color": "#666666",
-                            "size": "sm",
-                            "margin": "md"
-                          },
-                          {
-                            "type": "text",
-                            "text": $file_list,
-                            "wrap": true,
-                            "color": "#666666",
-                            "size": "sm"
-                          }
-                        ]
+                        "type": "text",
+                        "text": "📅 日時: " + ($date | fromdateiso8601 | strftime("%Y-%m-%d %H:%M:%S")),
+                        "wrap": true,
+                        "color": "#666666",
+                        "size": "sm"
+                      },
+                      {
+                        "type": "text",
+                        "text": "🌳 ブランチ: " + $branch,
+                        "wrap": true,
+                        "color": "#666666",
+                        "size": "sm"
+                      },
+                      {
+                        "type": "separator"
+                      },
+                      {
+                        "type": "text",
+                        "text": "✏️ 変更されたファイル:",
+                        "weight": "bold",
+                        "color": "#666666",
+                        "size": "sm",
+                        "margin": "md"
+                      },
+                      {
+                        "type": "text",
+                        "text": "変更されたファイル一覧は、この設定では取得できません。", # ここに代替メッセージを追加
+                        "wrap": true,
+                        "color": "#666666",
+                        "size": "sm"
                       }
                     ]
                   },
@@ -132,7 +134,7 @@ jobs:
                     "contents": [
                       {
                         "type": "text",
-                        "text": $author,
+                        "text": "🧑‍💻 作成者: " + $author,
                         "size": "xs",
                         "color": "#666666"
                       }
@@ -144,7 +146,7 @@ jobs:
               }
             ]
           }')
-          
+
           curl -v -X POST https://api.line.me/v2/bot/message/push \
           -H 'Content-Type: application/json' \
           -H "Authorization: Bearer $ACCESS_TOKEN" \
