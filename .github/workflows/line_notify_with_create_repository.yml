@@ -98,6 +98,7 @@ jobs:
                         "type": "text",
                         "text": ("📅 日時: " + ($date | fromdateiso8601 | strftime("%Y-%m-%d %H:%M:%S"))),
                         "wrap": true,
+                        "wrap": true,
                         "color": "#666666",
                         "size": "sm"
                       },
