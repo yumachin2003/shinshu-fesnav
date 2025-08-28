@@ -145,13 +145,11 @@ jobs:
                   }
                 }
               ]
-            }'
+            }
+          )
 
           # curlコマンドを独立させる
           curl -v -X POST https://api.line.me/v2/bot/message/push \
           -H 'Content-Type: application/json' \
           -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN }}" \
           -d "$payload"
-          
-          # payloadの内容を確認したい場合は別のコマンドとして実行する
-          echo "$payload"
