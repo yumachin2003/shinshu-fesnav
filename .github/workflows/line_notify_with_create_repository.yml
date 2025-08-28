@@ -24,17 +24,14 @@ jobs:
           GITHUB_EVENT: ${{ toJSON(github.event) }}
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
-          # 変更されたファイルの一覧を取得
-          # `commits`配列がnullではないかを確認してからjqを実行
-          if [[ "${{ github.event.commits }}" == "" ]]; then
-            file_list="変更なし"
-          else
-            file_list=$(echo "$GITHUB_EVENT" | jq '[.commits[] | .added, .modified, .removed] | flatten | unique | join("\n")')
-            # jqが出力する二重引用符を削除
-            file_list=$(echo "$file_list" | sed 's/^"//; s/"$//')
-          fi
+          # コミットSHAを最初の7文字に短縮
+          short_sha=$(echo "$COMMIT_SHA" | cut -c1-7)
           
-          # Flex MessageのJSONペイロードを作成
+          commit_author="Committed by: $COMMIT_AUTHOR"
+          
+          # GitHubリポジトリのURLを修正してください
+          commit_url="https://github.com/yumachin2003/shinshu-fesnav/commit/$COMMIT_SHA"
+
           payload=$(jq -n \
             --arg message "$COMMIT_MESSAGE" \
             --arg author "$COMMIT_AUTHOR" \
@@ -46,8 +43,8 @@ jobs:
             "to": "${{ secrets.GROUP_ID }}",
             "messages": [
               {
-                "type": "flex",
-                "altText": "新しいコミットがプッシュされました。",
+                "type":"flex",
+                "altText":"新しいコミットがプッシュされました。",
                 "contents": {
                   "type": "bubble",
                   "header": {
@@ -55,16 +52,11 @@ jobs:
                     "layout": "horizontal",
                     "contents": [
                       {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [],
-                        "cornerRadius": "5000px",
-                        "width": "16px",
-                        "height": "16px",
-                        "spacing": "none",
-                        "margin": "none",
-                        "backgroundColor": "#57ab5b",
-                        "offsetTop": "2px"
+                        "type": "text",
+                        "text": "📤",
+                        "weight": "bold",
+                        "size": "sm",
+                        "flex": 0,
                       },
                       {
                         "type": "box",
@@ -72,21 +64,17 @@ jobs:
                         "contents": [
                           {
                             "type": "text",
-                            "text": $message,
+                            "text": $message, # タイトルを追加
+                            "weight": "bold",
                             "color": "#d0d7e0",
-                            "wrap": true,
-                            "action": {
-                                "type": "uri",
-                                "label": "action",
-                                "uri": $url
-                            },
-                            "decoration": "underline"
+                            "wrap": true
                           },
                           {
                             "type": "text",
-                            "wrap": true,
-                            "text": ($sha | cut -c1-7),
-                            "color": "#666666"
+                            "text": $sha, # コミットSHAを追加
+                            "color": "#666666",
+                            "size": "xs",
+                            "margin": "sm"
                           }
                         ]
                       }
@@ -141,13 +129,14 @@ jobs:
                       }
                     ]
                   },
+
                   "footer": {
                     "type": "box",
                     "layout": "vertical",
                     "contents": [
                       {
                         "type": "text",
-                        "text": "🧑‍💻 作成者: " + $author,
+                        "text": $author, # コミット作成者を表示
                         "size": "xs",
                         "color": "#666666"
                       }
@@ -158,13 +147,9 @@ jobs:
                 }
               }
             ]
-          }')" >> $GITHUB_OUTPUT
+          }')
 
-      - name: Call API on push
-        env:
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-        run: |
           curl -v -X POST https://api.line.me/v2/bot/message/push \
           -H 'Content-Type: application/json' \
           -H "Authorization: Bearer $ACCESS_TOKEN" \
-          -d "${{ steps.prepare_payload.outputs.payload }}"
+          -d "$payload"
