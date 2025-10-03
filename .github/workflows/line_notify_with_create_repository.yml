@@ -122,8 +122,7 @@ jobs:
                           "type": "text",
                           "text": ("🧑‍💻 変更者: " + $author),
                           "size": "xs",
-                          "color": "#666666",
-                          "margin": "md"
+                          "color": "#666666"
                         }
                       ],
                       "alignItems": "flex-end",
