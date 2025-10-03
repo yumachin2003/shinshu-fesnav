@@ -112,7 +112,7 @@ jobs:
                           "margin": "sm"
                         }
                       ],
-                      "paddingAll": "md"
+                      "margin": "md"
                     },
                     "footer": {
                       "type": "box",
@@ -128,7 +128,7 @@ jobs:
                       ],
                       "alignItems": "flex-end",
                       "backgroundColor": "#F3F3F3",
-                      "paddingAll": "md"
+                      "margin": "md"
                     }
                   }
                 }
