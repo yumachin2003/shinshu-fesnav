@@ -81,7 +81,8 @@ jobs:
                               "type": "text",
                               "wrap": true,
                               "text": ($sha | .[0:7]),
-                              "color": "#666666"
+                              "color": "#666666",
+                              "margin": "sm"
                             }
                           ]
                         }
@@ -111,7 +112,8 @@ jobs:
                           "size": "sm",
                           "margin": "sm"
                         }
-                      ]
+                      ],
+                      "paddingBottom": "none"
                     },
                     "footer": {
                       "type": "box",
@@ -127,6 +129,7 @@ jobs:
                       ],
                       "alignItems": "flex-end",
                       "backgroundColor": "#F3F3F3"
+                      "paddingTop": "none"
                     }
                   }
                 }
