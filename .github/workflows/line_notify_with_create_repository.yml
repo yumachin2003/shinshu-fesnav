@@ -110,9 +110,6 @@ jobs:
                           "color": "#666666",
                           "size": "sm",
                           "margin": "sm"
-                        },
-                        {
-                          "type": "separator"
                         }
                       ]
                     },
@@ -120,11 +117,13 @@ jobs:
                       "type": "box",
                       "layout": "vertical",
                       "contents": [
-                        "type": "text",
-                        "text": ("🧑‍💻 変更者: " + $author),
-                        "size": "xs",
-                        "color": "#666666",
-                        "margin": "md"
+                        {
+                          "type": "text",
+                          "text": ("🧑‍💻 変更者: " + $author),
+                          "size": "xs",
+                          "color": "#666666",
+                          "margin": "md"
+                        }
                       ],
                       "alignItems": "flex-end",
                       "backgroundColor": "#F3F3F3"
