@@ -113,13 +113,6 @@ jobs:
                         },
                         {
                           "type": "separator"
-                        },
-                        {
-                          "type": "text",
-                          "text": ("🧑‍💻 変更者: " + $author),
-                          "size": "xs",
-                          "color": "#666666",
-                          "margin": "md"
                         }
                       ]
                     },
@@ -129,6 +122,13 @@ jobs:
                       "contents": [],
                       "alignItems": "flex-end",
                       "backgroundColor": "#F3F3F3"
+                      {
+                        "type": "text",
+                        "text": ("🧑‍💻 変更者: " + $author),
+                        "size": "xs",
+                        "color": "#666666",
+                        "margin": "md"
+                      }
                     }
                   }
                 }
