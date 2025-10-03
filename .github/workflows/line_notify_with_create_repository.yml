@@ -105,7 +105,7 @@ jobs:
                         },
                         {
                           "type": "text",
-                          "wrap": "true",
+                          "wrap": true,
                           "text": ("✏️ 変更内容: " + $message),
                           "color": "#666666",
                           "size": "sm",
