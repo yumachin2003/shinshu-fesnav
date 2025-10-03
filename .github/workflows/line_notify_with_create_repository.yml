@@ -40,7 +40,7 @@ jobs:
               "messages": [
                 {
                   "type": "flex",
-                  "altText": "新しいコミットがプッシュされました。",
+                  "altText": ($author + "によって新しいコミットがプッシュされました。"),
                   "contents": {
                     "type": "bubble",
                       "header": {
@@ -67,7 +67,7 @@ jobs:
                           "contents": [
                             {
                               "type": "text",
-                              "text": "リポジトリがプッシュされました",
+                              "text": "新しいコミットがプッシュされました。",
                               "color": "#d0d7e0",
                               "wrap": true,
                               "action": {
@@ -75,7 +75,7 @@ jobs:
                                   "label": "action",
                                   "uri": $url
                               },
-                              "decoration": "underline"
+                              "decoration": "bold"
                             },
                             {
                               "type": "text",
