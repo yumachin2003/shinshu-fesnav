@@ -70,12 +70,12 @@ jobs:
                               "text": "新しいコミットがプッシュされました。",
                               "color": "#d0d7e0",
                               "wrap": true,
+                              "weight": "bold",
                               "action": {
                                   "type": "uri",
                                   "label": "action",
                                   "uri": $url
                               },
-                              "decoration": "bold"
                             },
                             {
                               "type": "text",
