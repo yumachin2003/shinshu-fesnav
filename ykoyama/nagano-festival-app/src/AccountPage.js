@@ -5,8 +5,9 @@ import Favorite from "./Favorite";
 import { festivals } from "./FestivalData";
 
 export default function AccountPage() {
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem("user");
+  // user だけ使うので setUser は削除
+  const [user] = useState(() => {
+    const savedUser = localStorage.getItem("loggedInUser");
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
@@ -25,35 +26,43 @@ export default function AccountPage() {
     return saved ? JSON.parse(saved) : {};
   });
 
-  useEffect(() => {
-    localStorage.setItem("festivalRatings", JSON.stringify(ratings));
-  }, [ratings]);
+  const [editingComment, setEditingComment] = useState({}); // 編集中のコメント
 
-  useEffect(() => {
-    localStorage.setItem("festivalFavorites", JSON.stringify(favorites));
-  }, [favorites]);
+  // localStorage 更新
+  useEffect(() => localStorage.setItem("festivalRatings", JSON.stringify(ratings)), [ratings]);
+  useEffect(() => localStorage.setItem("festivalFavorites", JSON.stringify(favorites)), [favorites]);
+  useEffect(() => localStorage.setItem("festivalComments", JSON.stringify(comments)), [comments]);
 
-  useEffect(() => {
-    localStorage.setItem("festivalComments", JSON.stringify(comments));
-  }, [comments]);
+  if (!user) return <p>ログインしてください</p>;
 
-  if (!user) {
-    return <p>ログインしてください</p>;
-  }
-
+  // 評価
   const handleRate = (id, rating) => {
     setRatings(prev => ({ ...prev, [id]: Number(rating) }));
   };
 
+  // お気に入り解除
   const removeFavorite = (id) => {
     setFavorites(prev => ({ ...prev, [id]: false }));
   };
 
+  // コメント削除
   const handleDeleteComment = (festivalId, index) => {
+    setComments(prev => ({
+      ...prev,
+      [festivalId]: prev[festivalId].filter((_, i) => i !== index)
+    }));
+  };
+
+  // コメント編集保存
+  const handleSaveComment = (festivalId, index) => {
+    const newText = editingComment[`${festivalId}-${index}`]?.trim();
+    if (!newText) return;
     setComments(prev => {
-      const updated = { ...prev, [festivalId]: prev[festivalId].filter((_, i) => i !== index) };
-      return updated;
+      const updated = [...prev[festivalId]];
+      updated[index].text = newText;
+      return { ...prev, [festivalId]: updated };
     });
+    setEditingComment(prev => ({ ...prev, [`${festivalId}-${index}`]: "" }));
   };
 
   return (
@@ -66,12 +75,12 @@ export default function AccountPage() {
         {festivals.filter(f => favorites[f.id]).length === 0 && <p>お気に入りはありません</p>}
         {festivals.map(festival =>
           favorites[festival.id] ? (
-            <div key={festival.id} style={{ marginBottom: "1rem" }}>
+            <div key={festival.id} style={{ marginBottom: "1rem", display: "flex", alignItems: "center" }}>
               <span>{festival.name}</span>
               <Favorite selected={true} onToggle={() => removeFavorite(festival.id)} />
               <button
                 onClick={() => removeFavorite(festival.id)}
-                style={{ marginLeft: "0.5rem", color: "red" }}
+                style={{ marginLeft: "0.5rem", color: "red", cursor: "pointer" }}
               >
                 削除
               </button>
@@ -108,14 +117,53 @@ export default function AccountPage() {
               <strong>{festival.name}</strong>
               <ul style={{ listStyle: "none", paddingLeft: 0 }}>
                 {comments[festival.id].map((c, i) => (
-                  <li key={i} style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>{c.name}: {c.text} ({c.date})</span>
-                    <button
-                      onClick={() => handleDeleteComment(festival.id, i)}
-                      style={{ color: "red", cursor: "pointer" }}
-                    >
-                      削除
-                    </button>
+                  <li key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.3rem" }}>
+                    <div>
+                      <span><strong>{c.name}</strong> ({c.date}): </span>
+                      {c.name === user.username ? (
+                        editingComment[`${festival.id}-${i}`] !== undefined ? (
+                          <>
+                            <input
+                              type="text"
+                              value={editingComment[`${festival.id}-${i}`]}
+                              onChange={e =>
+                                setEditingComment(prev => ({ ...prev, [`${festival.id}-${i}`]: e.target.value }))
+                              }
+                              style={{ marginRight: "0.5rem" }}
+                            />
+                            <button
+                              onClick={() => handleSaveComment(festival.id, i)}
+                              style={{ marginRight: "0.5rem" }}
+                            >
+                              保存
+                            </button>
+                            <button
+                              onClick={() => setEditingComment(prev => ({ ...prev, [`${festival.id}-${i}`]: undefined }))}
+                            >
+                              キャンセル
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span>{c.text}</span>
+                            <button
+                              onClick={() => setEditingComment(prev => ({ ...prev, [`${festival.id}-${i}`]: c.text }))}
+                              style={{ marginLeft: "0.5rem" }}
+                            >
+                              編集
+                            </button>
+                            <button
+                              onClick={() => handleDeleteComment(festival.id, i)}
+                              style={{ marginLeft: "0.5rem", color: "red" }}
+                            >
+                              削除
+                            </button>
+                          </>
+                        )
+                      ) : (
+                        <span>{c.text}</span>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ul>

@@ -5,22 +5,23 @@ import RegisterPage from "./RegisterPage";
 import FestivalPage from "./FestivalPage";
 import AccountPage from "./AccountPage";
 
-// Context 作成
 export const UserContext = React.createContext();
 
-export default function App() {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem("loggedInUser");
-    return saved ? JSON.parse(saved) : null;
-  });
+const safeParse = (key) => {
+  try {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : null;
+  } catch {
+    return null;
+  }
+};
 
-  // userが変わったら localStorage にも保存
+export default function App() {
+  const [user, setUser] = useState(() => safeParse("loggedInUser"));
+
   useEffect(() => {
-    if (user) {
-      localStorage.setItem("loggedInUser", JSON.stringify(user));
-    } else {
-      localStorage.removeItem("loggedInUser");
-    }
+    if (user) localStorage.setItem("loggedInUser", JSON.stringify(user));
+    else localStorage.removeItem("loggedInUser");
   }, [user]);
 
   return (
