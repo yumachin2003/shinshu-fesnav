@@ -89,8 +89,7 @@ jobs:
                       ],
                       "backgroundColor": "#141c21",
                       "alignItems": "flex-start",
-                      "spacing": "none",
-                      "paddingAll": "md"
+                      "spacing": "md"
                     },
 
                     "body": {
@@ -113,7 +112,7 @@ jobs:
                           "margin": "sm"
                         }
                       ],
-                      "paddingBottom": "none"
+                      "padding": "md"
                     },
                     "footer": {
                       "type": "box",
