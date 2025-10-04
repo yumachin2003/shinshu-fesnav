@@ -122,7 +122,7 @@ jobs:
                           "action": {
                             "type": "uri",
                             "label": "変更内容をブラウザで開く",
-                            "url": $url
+                            "uri": $url
                           }
                         }
                       ],
