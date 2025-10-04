@@ -101,7 +101,7 @@ jobs:
                         {
                           "type": "box",
                           "layout": "horizontal",
-                          contents: [
+                          "contents": [
                             {
                               "type": "text",
                               "wrap": true,
