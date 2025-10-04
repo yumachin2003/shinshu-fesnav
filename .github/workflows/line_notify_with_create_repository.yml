@@ -118,7 +118,7 @@ jobs:
                               "text": $message,
                               "color": "#666666",
                               "size": "sm",
-                              "margin": "none"
+                              "margin": "none",
                               "flex": 1
                             }
                           ],
