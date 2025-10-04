@@ -85,7 +85,7 @@ jobs:
                       "backgroundColor": "#141c21",
                       "alignItems": "flex-start",
                       "spacing": "md"
-                    },
+                    }
 
                     "body": {
                       "type": "box",
