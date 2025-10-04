@@ -92,11 +92,27 @@ jobs:
                       "layout": "vertical",
                       "contents": [
                         {
-                          "type": "text",
-                          "text": ("🌳 ブランチ: " + $branch),
-                          "wrap": true,
-                          "color": "#666666",
-                          "size": "sm"
+                          "type": "box",
+                          "layout": "horizontal",
+                          "contents": [
+                            {
+                              "type": "text",
+                              "text": "🌳 ブランチ: ",
+                              "wrap": true,
+                              "color": "#666666",
+                              "size": "sm"
+                              "flex": 0,
+                              "weight": "bold"
+                            },
+                            {
+                              "type": "text",
+                              "text": $branch
+                              "wrap": true,
+                              "color": "#666666",
+                              "size": "sm"
+                              "flex": 1 
+                            }
+                          ]
                         },
                         {
                           "type": "box",
