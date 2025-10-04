@@ -100,7 +100,7 @@ jobs:
                               "text": "🌳 ブランチ: ",
                               "wrap": true,
                               "color": "#666666",
-                              "size": "sm"
+                              "size": "sm",
                               "flex": 0,
                               "weight": "bold"
                             },
@@ -109,7 +109,7 @@ jobs:
                               "text": $branch
                               "wrap": true,
                               "color": "#666666",
-                              "size": "sm"
+                              "size": "sm",
                               "flex": 1 
                             }
                           ]
