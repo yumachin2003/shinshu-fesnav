@@ -98,21 +98,27 @@ jobs:
                           "color": "#666666",
                           "size": "sm"
                         },
-                        {
-                          "type": "text",
-                          "wrap": true,
-                          "text": "✏️ 変更内容: ",
-                          "color": "#666666",
-                          "size": "sm",
-                          "margin": "sm"
-                        },
-                        {
-                          "type": "text",
-                          "wrap": true,
-                          "text": $message,
-                          "color": "#666666",
-                          "size": "sm",
-                          "margin": "none"
+                        "summary": {
+                          "type": "box",
+                          "layout": "horizontal",
+                          contents: {
+                            {
+                              "type": "text",
+                              "wrap": true,
+                              "text": "✏️ 変更内容: ",
+                              "color": "#666666",
+                              "size": "sm",
+                              "margin": "sm"
+                            },
+                            {
+                              "type": "text",
+                              "wrap": true,
+                              "text": $message,
+                              "color": "#666666",
+                              "size": "sm",
+                              "margin": "none"
+                            }
+                          },
                           "action": {
                             "type": "url",
                             "label": "変更内容をブラウザで開く",
