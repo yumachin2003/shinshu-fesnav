@@ -98,7 +98,7 @@ jobs:
                           "color": "#666666",
                           "size": "sm"
                         },
-                        "summary": {
+                        {
                           "type": "box",
                           "layout": "horizontal",
                           contents: {
