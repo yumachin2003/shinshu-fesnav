@@ -108,7 +108,9 @@ jobs:
                               "text": "✏️ 変更内容: ",
                               "color": "#666666",
                               "size": "sm",
-                              "margin": "none"
+                              "margin": "none",
+                              "flex": 0,
+                              "weight": "bold"
                             },
                             {
                               "type": "text",
@@ -117,6 +119,7 @@ jobs:
                               "color": "#666666",
                               "size": "sm",
                               "margin": "none"
+                              "flex": 1
                             }
                           ],
                           "action": {
