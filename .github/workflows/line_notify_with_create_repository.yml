@@ -101,7 +101,7 @@ jobs:
                         {
                           "type": "box",
                           "layout": "horizontal",
-                          contents: {
+                          contents: [
                             {
                               "type": "text",
                               "wrap": true,
@@ -118,7 +118,7 @@ jobs:
                               "size": "sm",
                               "margin": "none"
                             }
-                          },
+                          ],
                           "action": {
                             "type": "url",
                             "label": "変更内容をブラウザで開く",
