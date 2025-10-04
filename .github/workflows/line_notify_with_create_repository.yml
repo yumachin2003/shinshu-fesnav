@@ -120,7 +120,7 @@ jobs:
                             }
                           ],
                           "action": {
-                            "type": "url",
+                            "type": "uri",
                             "label": "変更内容をブラウザで開く",
                             "url": $url
                           }
@@ -128,6 +128,7 @@ jobs:
                       ],
                       "margin": "md"
                     },
+
                     "footer": {
                       "type": "box",
                       "layout": "vertical",
