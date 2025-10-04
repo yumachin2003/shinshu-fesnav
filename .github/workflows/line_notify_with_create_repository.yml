@@ -106,7 +106,7 @@ jobs:
                             },
                             {
                               "type": "text",
-                              "text": $branch
+                              "text": $branch,
                               "wrap": true,
                               "color": "#666666",
                               "size": "sm",
