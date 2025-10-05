@@ -92,36 +92,62 @@ jobs:
                       "layout": "vertical",
                       "contents": [
                         {
-                          "type": "text",
-                          "text": ("🌳 ブランチ: " + $branch),
-                          "wrap": true,
-                          "color": "#666666",
-                          "size": "sm"
+                          "type": "box",
+                          "layout": "horizontal",
+                          "contents": [
+                            {
+                              "type": "text",
+                              "text": "🌳 ブランチ: ",
+                              "wrap": true,
+                              "color": "#666666",
+                              "size": "sm",
+                              "flex": 0,
+                              "weight": "bold"
+                            },
+                            {
+                              "type": "text",
+                              "text": $branch,
+                              "wrap": true,
+                              "color": "#666666",
+                              "size": "sm",
+                              "flex": 1 
+                            }
+                          ]
                         },
                         {
-                          "type": "text",
-                          "wrap": true,
-                          "text": "✏️ 変更内容: ",
-                          "color": "#666666",
-                          "size": "sm",
-                          "margin": "sm"
-                        },
-                        {
-                          "type": "text",
-                          "wrap": true,
-                          "text": $message,
-                          "color": "#666666",
-                          "size": "sm",
-                          "margin": "none"
+                          "type": "box",
+                          "layout": "horizontal",
+                          "contents": [
+                            {
+                              "type": "text",
+                              "wrap": true,
+                              "text": "✏️ 変更内容: ",
+                              "color": "#666666",
+                              "size": "sm",
+                              "margin": "none",
+                              "flex": 0,
+                              "weight": "bold"
+                            },
+                            {
+                              "type": "text",
+                              "wrap": true,
+                              "text": $message,
+                              "color": "#666666",
+                              "size": "sm",
+                              "margin": "none",
+                              "flex": 1
+                            }
+                          ],
                           "action": {
-                            "type": "url",
+                            "type": "uri",
                             "label": "変更内容をブラウザで開く",
-                            "url": $url
+                            "uri": $url
                           }
-                        },
+                        }
                       ],
                       "margin": "md"
                     },
+
                     "footer": {
                       "type": "box",
                       "layout": "vertical",
