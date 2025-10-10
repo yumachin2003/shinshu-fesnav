@@ -7,9 +7,11 @@ on:
       - develop
     tags:
       - 'v*'
+  pull_request:
+    types: [opened, reopened, synchronize]
 
 jobs:
-  notify_on_commit:
+  notify_on_event:
     runs-on: ubuntu-latest
     steps:
       - name: Install jq
@@ -21,12 +23,24 @@ jobs:
           GITHUB_EVENT: ${{ toJSON(github.event) }}
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
-          # jqの`//`演算子を使って、変数を直接定義
-          MESSAGE=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.message // "新しいタグがプッシュされました"')
-          AUTHOR=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.author.name // .pusher.name')
-          URL=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.url // .repository.html_url')
-          SHA=$(echo "$GITHUB_EVENT" | jq -r '.after')
-          BRANCH=$(echo "$GITHUB_EVENT" | jq -r '.ref | sub("refs/heads/"; "")')
+          if [ "$EVENT_NAME" == "pull_request" ]; then
+            MESSAGE=$(echo "$GITHUB_EVENT" | jq -r '.pull_request.title')
+            AUTHOR=$(echo "$GITHUB_EVENT" | jq -r '.pull_request.user.login')
+            URL=$(echo "$GITHUB_EVENT" | jq -r '.pull_request.html_url')
+            SHA=$(echo "$GITHUB_EVENT" | jq -r '.pull_request.head.sha')
+            BRANCH=$(echo "$GITHUB_EVENT" | jq -r '.pull_request.head.ref')
+            TITLE_TEXT="プルリクエストが作成されました"
+            ICON="📬"
+
+          else # pushイベントの場合
+            MESSAGE=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.message // "新しいタグがプッシュされました"')
+            AUTHOR=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.author.name // .pusher.name')
+            URL=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.url // .repository.html_url')
+            SHA=$(echo "$GITHUB_EVENT" | jq -r '.after')
+            BRANCH=$(echo "$GITHUB_EVENT" | jq -r '.ref | sub("refs/heads/"; "")')
+            TITLE_TEXT="新しいコミットがプッシュされました。"
+            ICON="📤"
+          fi
 
           # jqコマンドでpayloadを生成
           payload=$(jq -n \
@@ -40,7 +54,7 @@ jobs:
               "messages": [
                 {
                   "type": "flex",
-                  "altText": ($author + "によって新しいコミットがプッシュされました。"),
+                  "altText": ($author + "によって" + $title_text),
                   "contents": {
                     "type": "bubble",
                       "header": {
@@ -140,7 +154,7 @@ jobs:
                           ],
                           "action": {
                             "type": "uri",
-                            "label": "変更内容をブラウザで開く",
+                            "label": "詳細をブラウザで開く",
                             "uri": $url
                           }
                         }
