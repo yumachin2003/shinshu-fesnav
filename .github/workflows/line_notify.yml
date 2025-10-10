@@ -21,12 +21,25 @@ jobs:
           GITHUB_EVENT: ${{ toJSON(github.event) }}
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
-          # jqの`//`演算子を使って、変数を直接定義
-          MESSAGE=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.message // "新しいタグがプッシュされました"')
-          AUTHOR=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.author.name // .pusher.name')
-          URL=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.url // .repository.html_url')
-          SHA=$(echo "$GITHUB_EVENT" | jq -r '.after')
-          BRANCH=$(echo "$GITHUB_EVENT" | jq -r '.ref | sub("refs/heads/"; "")')
+          # イベントタイプに応じて変数を定義
+          if [ "$EVENT_NAME" == "pull_request" ]; then
+            MESSAGE=$(echo "$GITHUB_EVENT" | jq -r '.pull_request.title')
+            AUTHOR=$(echo "$GITHUB_EVENT" | jq -r '.pull_request.user.login')
+            URL=$(echo "$GITHUB_EVENT" | jq -r '.pull_request.html_url')
+            SHA=$(echo "$GITHUB_EVENT" | jq -r '.pull_request.head.sha')
+            BRANCH=$(echo "$GITHUB_EVENT" | jq -r '.pull_request.head.ref')
+            TITLE_TEXT="プルリクエストが作成されました"
+            ICON="📥"
+
+          else # pushイベントの場合
+            MESSAGE=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.message // "新しいタグがプッシュされました"')
+            AUTHOR=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.author.name // .pusher.name')
+            URL=$(echo "$GITHUB_EVENT" | jq -r '.head_commit.url // .repository.html_url')
+            SHA=$(echo "$GITHUB_EVENT" | jq -r '.after')
+            BRANCH=$(echo "$GITHUB_EVENT" | jq -r '.ref | sub("refs/heads/"; "")')
+            TITLE_TEXT="新しいコミットがプッシュされました。"
+            ICON="📤"
+          fi
 
           # jqコマンドでpayloadを生成
           payload=$(jq -n \
