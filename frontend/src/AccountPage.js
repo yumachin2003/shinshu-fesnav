@@ -1,6 +1,8 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { festivals } from "./FestivalData";
+import { UserContext } from "./App";
+import StarRating from "./StarRating";
 
 const safeParse = (key, fallback = {}) => {
   try {
@@ -12,133 +14,127 @@ const safeParse = (key, fallback = {}) => {
 };
 
 export default function AccountPage() {
-  const [user, setUser] = useState(null);
-  const [ratings, setRatings] = useState({});
-  const [favorites, setFavorites] = useState({});
-  const [comments, setComments] = useState({});
-  const [editId, setEditId] = useState(null);
-  const [editText, setEditText] = useState("");
-  const alertShown = useRef(false);
+  const { user, setUser } = useContext(UserContext);
   const navigate = useNavigate();
 
+  const [favorites, setFavorites] = useState({});
+  const [ratings, setRatings] = useState({});
+  const [diaries, setDiaries] = useState({});
+  const [editLogs, setEditLogs] = useState([]);
+
   useEffect(() => {
-    const storedUser = safeParse("loggedInUser", null);
-    if (!storedUser && !alertShown.current) {
-      alert("ログインが必要です。");
-      alertShown.current = true;
-      navigate("/");
-      return;
-    }
-    if (!storedUser) return;
+    if (!user) return;
+    setFavorites(safeParse(`festivalFavorites_${user.username}`, {}));
+    setRatings(safeParse(`festivalRatings_${user.username}`, {}));
+    setDiaries(safeParse(`festivalDiaries_${user.username}`, {}));
+    setEditLogs(safeParse(`festivalEditLogs_${user.username}`, []));
+  }, [user]);
 
-    setUser(storedUser);
-
-    setRatings(safeParse(`festivalRatings_${storedUser.username}`, {}));
-    setFavorites(safeParse(`festivalFavorites_${storedUser.username}`, {}));
-
-    const allComments = safeParse("festivalComments", {});
-    // 自分のコメントだけ抽出
-    const myComments = {};
-    Object.entries(allComments).forEach(([fid, clist]) => {
-      const filtered = clist.filter((c) => c.user === storedUser.username);
-      if (filtered.length) myComments[fid] = filtered;
-    });
-    setComments(myComments);
-  }, [navigate]);
-
-  const saveComments = (updated) => {
-    setComments(updated);
-    const allComments = safeParse("festivalComments", {});
-    // 自分のコメントだけ更新
-    Object.entries(updated).forEach(([fid, clist]) => {
-      allComments[fid] = [
-        ...(allComments[fid]?.filter((c) => c.user !== user.username) || []),
-        ...clist,
-      ];
-    });
-    localStorage.setItem("festivalComments", JSON.stringify(allComments));
+  const saveData = (key, data) => {
+    localStorage.setItem(`${key}_${user.username}`, JSON.stringify(data));
   };
 
-  const changeRating = (id, value) => {
-    const updated = { ...ratings, [id]: Number(value) };
-    setRatings(updated);
-    localStorage.setItem(`festivalRatings_${user.username}`, JSON.stringify(updated));
-  };
-
-  const removeFavorite = (id) => {
-    const updated = { ...favorites, [id]: false };
+  const saveFavorites = (updated) => {
     setFavorites(updated);
-    localStorage.setItem(`festivalFavorites_${user.username}`, JSON.stringify(updated));
+    saveData("festivalFavorites", updated);
   };
 
-  const deleteComment = (fid, ts) => {
-    const updated = { ...comments, [fid]: comments[fid].filter((c) => c.timestamp !== ts) };
-    saveComments(updated);
+  const saveRatings = (updated) => {
+    setRatings(updated);
+    saveData("festivalRatings", updated);
   };
 
-  const editComment = (fid, ts) => {
-    setEditId(`${fid}-${ts}`);
-    const t = comments[fid].find((c) => c.timestamp === ts);
-    setEditText(t.text);
-  };
-
-  const saveCommentEdit = (fid, ts) => {
-    const updated = {
-      ...comments,
-      [fid]: comments[fid].map((c) =>
-        c.timestamp === ts ? { ...c, text: editText, date: new Date().toLocaleString() } : c
-      ),
-    };
-    setEditId(null);
-    setEditText("");
-    saveComments(updated);
+  const saveDiaries = (updated) => {
+    setDiaries(updated);
+    saveData("festivalDiaries", updated);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("loggedInUser");
-    alert("ログアウトしました。");
+    setUser(null);
     navigate("/");
   };
 
-  if (!user) return null;
+  const allPhotos = Object.values(diaries).flat().filter((e) => e.image);
+
+  // ✅ CSV出力機能
+  const handleExportCSV = () => {
+    if (editLogs.length === 0) {
+      alert("出力する編集履歴がありません。");
+      return;
+    }
+
+    const headers = ["お祭り名", "編集内容", "日時"];
+    const rows = editLogs.map((log) => [
+      `"${log.festival}"`,
+      `"${log.content.replace(/"/g, '""')}"`,
+      `"${log.date}"`,
+    ]);
+
+    const csvContent =
+      "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `festivalEditLogs_${user.username}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (!user) return <p>ログインが必要です。</p>;
 
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>マイページ</h1>
-      <p>ログイン中: <strong>{user.username}</strong></p>
-
-      <button
-        onClick={handleLogout}
+      {/* 🌐 言語切り替え */}
+    <div id="google_translate_element" style={{ position: "fixed", top: 10, right: 10, zIndex: 9999 }}></div>
+      {/* 上部固定ログアウト */}
+      <div
         style={{
-          background: "#f55",
-          color: "white",
-          border: "none",
-          padding: "8px 16px",
-          borderRadius: "8px",
-          marginBottom: "1rem"
+          position: "sticky",
+          top: 0,
+          background: "#fff8e1",
+          padding: "10px 20px",
+          borderBottom: "2px solid #ffd54f",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          zIndex: 100,
         }}
       >
-        ログアウト
-      </button>
+        <h1 style={{ margin: 0 }}>{user.username}さんのマイページ</h1>
+        <button
+          onClick={handleLogout}
+          style={{
+            background: "#ff6666",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            padding: "6px 12px",
+            cursor: "pointer",
+            fontWeight: "bold",
+          }}
+        >
+          ログアウト
+        </button>
+      </div>
 
-      <h2>⭐ 評価済みのお祭り</h2>
-      <ul>
-        {Object.entries(ratings)
-          .filter(([_, v]) => v > 0)
-          .map(([fid, value]) => {
-            const f = festivals.find((x) => x.id === Number(fid));
-            return (
-              <li key={fid}>
-                {f?.name || `ID:${fid}`} — {value}★{" "}
-                <button onClick={() => changeRating(fid, prompt("新しい星(1-5):", value))}>
-                  変更
-                </button>
-              </li>
-            );
-          })}
-      </ul>
+      <h2>⭐ 星の評価</h2>
+      {festivals.map((f) => (
+        <div key={f.id}>
+          <strong>{f.name}</strong>
+          <StarRating
+            count={5}
+            value={ratings[f.id] || 0}
+            onRate={(r) => {
+              const updated = { ...ratings, [f.id]: r };
+              saveRatings(updated);
+            }}
+          />
+        </div>
+      ))}
 
-      <h2>💖 お気に入りのお祭り</h2>
+      <h2>❤️ お気に入りのお祭り</h2>
       <ul>
         {Object.entries(favorites)
           .filter(([_, v]) => v)
@@ -146,49 +142,129 @@ export default function AccountPage() {
             const f = festivals.find((x) => x.id === Number(fid));
             return (
               <li key={fid}>
-                {f?.name || `ID:${fid}`}{" "}
-                <button onClick={() => removeFavorite(fid)} style={{ color: "red" }}>解除</button>
+                {f?.name}
+                <button
+                  onClick={() => {
+                    const updated = { ...favorites, [fid]: false };
+                    saveFavorites(updated);
+                  }}
+                  style={{
+                    marginLeft: "10px",
+                    color: "red",
+                    border: "1px solid red",
+                    borderRadius: "5px",
+                    background: "white",
+                    cursor: "pointer",
+                  }}
+                >
+                  お気に入り解除
+                </button>
               </li>
             );
           })}
       </ul>
 
-      <h2>💬 自分のコメント</h2>
-      <ul>
-        {Object.entries(comments).length > 0 ? (
-          Object.entries(comments).flatMap(([fid, clist]) =>
-            clist.map((c) => {
-              const isEditing = editId === `${fid}-${c.timestamp}`;
-              const fest = festivals.find((f) => f.id === Number(fid));
-              return (
-                <li key={c.timestamp}>
-                  <strong>{fest?.name}</strong> — {c.date}
-                  <br />
-                  {isEditing ? (
-                    <>
-                      <input value={editText} onChange={(e) => setEditText(e.target.value)} />
-                      <button onClick={() => saveCommentEdit(fid, c.timestamp)}>保存</button>
-                    </>
-                  ) : (
-                    <>
-                      {c.text}{" "}
-                      <button onClick={() => editComment(fid, c.timestamp)}>編集</button>
-                      <button
-                        onClick={() => deleteComment(fid, c.timestamp)}
-                        style={{ color: "red" }}
-                      >
-                        削除
-                      </button>
-                    </>
-                  )}
-                </li>
-              );
-            })
-          )
-        ) : (
-          <p>コメントはまだありません。</p>
-        )}
-      </ul>
+      <h2>📔 自分の日記</h2>
+      {Object.entries(diaries).length === 0 ? (
+        <p>まだ日記はありません。</p>
+      ) : (
+        Object.entries(diaries).map(([fid, entries]) =>
+          entries.map((entry) => {
+            const f = festivals.find((x) => x.id === Number(fid));
+            return (
+              <div key={entry.timestamp} style={{ marginBottom: "1rem" }}>
+                <strong>{f?.name}</strong> — {entry.date}
+                <br />
+                <textarea
+                  value={entry.text}
+                  onChange={(e) => {
+                    const updated = { ...diaries };
+                    const idx = updated[fid].findIndex(
+                      (x) => x.timestamp === entry.timestamp
+                    );
+                    updated[fid][idx].text = e.target.value;
+                    saveDiaries(updated);
+                  }}
+                  style={{ width: "100%", height: "60px" }}
+                />
+                {entry.image && (
+                  <img
+                    src={entry.image}
+                    alt=""
+                    style={{
+                      width: "100%",
+                      maxWidth: "400px",
+                      borderRadius: "8px",
+                      marginTop: "0.5rem",
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })
+        )
+      )}
+
+      <h2>📷 アップロード写真アルバム</h2>
+      {allPhotos.length ? (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+            gap: "10px",
+          }}
+        >
+          {allPhotos.map((e, i) => (
+            <img
+              key={i}
+              src={e.image}
+              alt=""
+              style={{
+                width: "100%",
+                height: "150px",
+                objectFit: "cover",
+                borderRadius: "10px",
+              }}
+            />
+          ))}
+        </div>
+      ) : (
+        <p>まだ写真がありません。</p>
+      )}
+
+      {/* 🕒 編集履歴ログ */}
+      <h2 style={{ marginTop: "2rem" }}>🕒 編集履歴ログ</h2>
+
+      {editLogs.length > 0 && (
+        <button
+          onClick={handleExportCSV}
+          style={{
+            marginBottom: "1rem",
+            backgroundColor: "#4caf50",
+            color: "white",
+            border: "none",
+            borderRadius: "6px",
+            padding: "8px 12px",
+            cursor: "pointer",
+          }}
+        >
+          CSV形式で出力
+        </button>
+      )}
+
+      {editLogs.length ? (
+        <ul>
+          {editLogs.map((log, i) => (
+            <li key={i} style={{ marginBottom: "0.5rem" }}>
+              <strong>{log.festival}</strong> — {log.date}
+              <br />
+              <span style={{ color: "#555" }}>{log.content}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>まだ編集履歴はありません。</p>
+      )}
     </div>
   );
 }
