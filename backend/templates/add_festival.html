@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>フェスデータ登録</title>
+</head>
+<body>
+    <h1>フェスティバルデータ登録</h1>
+    
+    <form method="POST" action="{{ url_for('add_festival') }}">
+        <div>
+            <label for="name">フェス名:</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+        <br>
+        <div>
+            <label for="date">開催日:</label>
+            <input type="date" id="date" name="date" required>
+        </div>
+        <br>
+        <div>
+            <label for="location">場所:</label>
+            <input type="text" id="location" name="location" required>
+        </div>
+        <br>
+        <button type="submit">登録する</button>
+    </form>
+    
+    <hr>
+    <p><a href="{{ url_for('index') }}">登録済みデータ一覧へ</a></p>
+</body>
+</html>
