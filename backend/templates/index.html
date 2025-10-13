@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>フェスデータ一覧</title>
+    <style>
+        table {
+            width: 80%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>登録済みフェスティバル一覧</h1>
+
+    {% if festivals %}
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>フェス名</th>
+                <th>開催日</th>
+                <th>場所</th>
+                <th>動員数</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for festival in festivals %}
+            <tr>
+                <td>{{ festival.id }}</td>
+                <td>{{ festival.name }}</td>
+                <td>{{ festival.date }}</td>
+                <td>{{ festival.location }}</td>
+                <td>{{ festival.attendance }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>データはまだ登録されていません。</p>
+    {% endif %}
+    
+    <hr>
+    <p><a href="{{ url_for('add_festival') }}">新しいデータを登録する</a></p>
+
+</body>
+</html>
