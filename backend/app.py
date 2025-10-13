@@ -1,5 +1,6 @@
-from flask import Flask
+from flask import Flask, render_template, request, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///fesData.db'
@@ -21,7 +22,38 @@ class Festivals(db.Model):
     def __repr__(self):
         return f'<Festivals {self.name}>'
 
+@app.route('/add', methods=['GET', 'POST'])
+def add_festival():
+    if request.method == 'POST':
+        fesName = request.form['name']
+        fesDate_str = request.form['date']
+        fesLocation = request.form['location']
+
+        try: fesDate = datetime.strptime(fesDate_str, '%Y-%m-%d').date()
+        except ValueError: return "日付の形式が不正です。YYYY-MM-DD 形式で入力してください。", 400
+
+        new_festival = Festivals(
+            name=fesName,
+            date=fesDate,
+            location=fesLocation,
+        )
+
+        try:
+            db.session.add(new_festival)
+            db.session.commit()
+            return redirect(url_for('add_festival')) 
+        except Exception as e:
+            db.session.rollback()
+            return f"データ登録中にエラーが発生しました: {e}", 500
+    
+    return render_template('add_festival.html')
+    
+@app.route('/')
+def index():
+    festivals = Festivals.query.all()
+    return render_template('index.html', festivals=festivals)
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    #app.run(debug=True)
+    app.run(debug=True)
