@@ -94,3 +94,8 @@ form {
   font-size: 1.8rem;
   margin: 10px 0;
 }
+
+ul {
+  list-style: none;
+  padding: 0;
+}
