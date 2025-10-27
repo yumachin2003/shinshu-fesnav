@@ -4,6 +4,7 @@ import LoginPage from "./LoginPage";
 import RegisterPage from "./RegisterPage";
 import FestivalPage from "./FestivalPage";
 import AccountPage from "./AccountPage";
+import ItemManagementPage from "./ItemManagementPage"; // 新しいコンポーネントをインポート
 
 export const UserContext = React.createContext();
 
@@ -29,12 +30,14 @@ export default function App() {
       <Router>
         <nav style={{ padding: "1rem", borderBottom: "1px solid #ccc" }}>
           <Link to="/festivals" style={{ marginRight: "1rem" }}>お祭り</Link>
+          <Link to="/items" style={{ marginRight: "1rem" }}>アイテム管理</Link> {/* 新しいページへのリンクを追加 */}
           <Link to="/account">アカウント</Link>
         </nav>
         <Routes>
           <Route path="/" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/festivals" element={<FestivalPage />} />
+          <Route path="/items" element={<ItemManagementPage />} /> {/* 新しいページのルートを追加 */}
           <Route path="/account" element={<AccountPage />} />
         </Routes>
       </Router>
