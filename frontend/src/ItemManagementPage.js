@@ -1,78 +1,116 @@
 import React, { useState, useEffect } from 'react';
 // API通信ロジックを分離したモジュールをインポート
-import { getItems, createItem } from './apiService';
+import { getFestivals, createFestival } from './apiService';
+
+const INITIAL_STATE = {
+  name: '',
+  date: '',
+  location: '',
+};
 
 function ItemManagementPage() {
-  const [items, setItems] = useState([]);
-  const [itemName, setItemName] = useState('');
+  const [festivals, setFestivals] = useState([]);
+  const [newFestival, setNewFestival] = useState(INITIAL_STATE);
   // ローディング状態とエラー状態を管理するstateを追加
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // コンポーネントの初回レンダリング時にアイテムを取得
   useEffect(() => {
-    fetchItems();
+    fetchFestivals();
   }, []);
 
-  const fetchItems = async () => {
+  const fetchFestivals = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await getItems();
-      setItems(response.data);
+      const response = await getFestivals();
+      setFestivals(response.data);
     } catch (error) {
-      console.error("Error fetching items:", error);
-      setError("アイテムの読み込みに失敗しました。");
+      console.error("Error fetching festivals:", error);
+      setError("お祭りデータの読み込みに失敗しました。");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewFestival({ ...newFestival, [name]: value });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!itemName.trim()) {
-      alert('アイテム名を入力してください。');
+    if (!newFestival.name.trim() || !newFestival.date.trim() || !newFestival.location.trim()) {
+      alert('すべての項目を入力してください。');
       return;
     }
     try {
-      await createItem({ name: itemName });
-      setItemName('');
+      await createFestival(newFestival);
+      setNewFestival(INITIAL_STATE); // フォームをリセット
       // 成功したらリストを再読み込み
-      fetchItems();
+      fetchFestivals();
     } catch (error) {
-      console.error("Error adding item:", error);
-      setError("アイテムの追加に失敗しました。");
+      console.error("Error adding festival:", error);
+      setError("お祭りの追加に失敗しました。");
     }
   };
 
   return (
     <div className="container">
       <div className="card">
-        <h1>アイテム管理</h1>
+        <h1>お祭り管理</h1>
 
         <form onSubmit={handleSubmit}>
           <input
             type="text"
-            value={itemName}
-            onChange={(e) => setItemName(e.target.value)}
-            placeholder="新しいアイテム名"
+            name="name"
+            value={newFestival.name}
+            onChange={handleInputChange}
+            placeholder="お祭り名"
+            disabled={loading}
+          />
+          <input
+            type="date"
+            name="date"
+            value={newFestival.date}
+            onChange={handleInputChange}
+            placeholder="開催日"
+            disabled={loading}
+          />
+          <input
+            type="text"
+            name="location"
+            value={newFestival.location}
+            onChange={handleInputChange}
+            placeholder="開催場所"
             disabled={loading} // ローディング中は入力を無効化
           />
           <button type="submit" disabled={loading}>
-            {loading ? '追加中...' : '追加'}
+            {loading ? '処理中...' : 'お祭りを追加'}
           </button>
         </form>
 
-        <h2>登録済みアイテム</h2>
+        <h2>登録済みのお祭り</h2>
         {/* エラーメッセージの表示 */}
         {error && <p style={{ color: 'red' }}>{error}</p>}
         {/* ローディング表示 */}
         {loading ? (
           <p>読み込み中...</p>
         ) : (
-          <ul>
-            {items.map((item) => (<li key={item.id}>{item.name}</li>))}
-          </ul>
+          <table>
+            <thead>
+              <tr><th>名前</th><th>開催日</th><th>場所</th></tr>
+            </thead>
+            <tbody>
+              {festivals.map((festival) => (
+                <tr key={festival.id}>
+                  <td>{festival.name}</td>
+                  <td>{festival.date}</td>
+                  <td>{festival.location}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
     </div>
