@@ -23,14 +23,3 @@ class Festivals(db.Model):
          'attendance': self.attendance,
          'attend_year': self.attend_year,
       }
-
-class Item(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-
-    # データをJSON形式（辞書）で返しやすくするためのヘルパー関数
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name
-        }
