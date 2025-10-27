@@ -1,11 +1,16 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
+from flask_cors import CORS
 
 db = SQLAlchemy()
+migrate = Migrate()
 
 def create_app():
     """Application-factory function"""
     app = Flask(__name__, instance_relative_config=True)
+
+    CORS(app)
 
     # 設定の読み込み
     app.config.from_mapping(
@@ -15,9 +20,13 @@ def create_app():
 
     # 拡張機能の初期化
     db.init_app(app)
+    migrate.init_app(app, db)
 
     with app.app_context():
         from . import routes
+        from . import api_routes
+        app.register_blueprint(api_routes.api_bp)
+
         db.create_all()
 
     return app
