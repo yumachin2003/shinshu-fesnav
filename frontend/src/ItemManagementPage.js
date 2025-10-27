@@ -1,40 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+// API通信ロジックを分離したモジュールをインポート
+import { getItems, createItem } from './apiService';
 
 function ItemManagementPage() {
   const [items, setItems] = useState([]);
   const [itemName, setItemName] = useState('');
+  // ローディング状態とエラー状態を管理するstateを追加
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // コンポーネントの初回レンダリング時にアイテムを取得
   useEffect(() => {
     fetchItems();
   }, []);
 
-  // GETリクエストでアイテム一覧を取得する関数
   const fetchItems = async () => {
+    setLoading(true);
+    setError(null);
     try {
-      // package.jsonのproxy設定により、'/api/items'は'http://localhost:5000/api/items'に転送される
-      const response = await axios.get('/api/items');
+      const response = await getItems();
       setItems(response.data);
     } catch (error) {
       console.error("Error fetching items:", error);
+      setError("アイテムの読み込みに失敗しました。");
+    } finally {
+      setLoading(false);
     }
   };
 
-  // フォームの送信処理
   const handleSubmit = async (e) => {
-    e.preventDefault(); // フォームのデフォルトの送信動作をキャンセル
+    e.preventDefault();
     if (!itemName.trim()) {
       alert('アイテム名を入力してください。');
       return;
     }
     try {
-      // POSTリクエストで新しいアイテムをバックエンドに送信
-      await axios.post('/api/items', { name: itemName });
-      setItemName(''); // 入力フィールドをクリア
-      fetchItems(); // アイテム一覧を再取得して表示を更新
+      await createItem({ name: itemName });
+      setItemName('');
+      // 成功したらリストを再読み込み
+      fetchItems();
     } catch (error) {
       console.error("Error adding item:", error);
+      setError("アイテムの追加に失敗しました。");
     }
   };
 
@@ -42,23 +49,31 @@ function ItemManagementPage() {
     <div className="container">
       <div className="card">
         <h1>アイテム管理</h1>
-        
-        {/* アイテム追加フォーム */}
+
         <form onSubmit={handleSubmit}>
           <input
             type="text"
             value={itemName}
             onChange={(e) => setItemName(e.target.value)}
             placeholder="新しいアイテム名"
+            disabled={loading} // ローディング中は入力を無効化
           />
-          <button type="submit">追加</button>
+          <button type="submit" disabled={loading}>
+            {loading ? '追加中...' : '追加'}
+          </button>
         </form>
 
-        {/* アイテム一覧 */}
         <h2>登録済みアイテム</h2>
-        <ul>
-          {items.map((item) => (<li key={item.id}>{item.name}</li>))}
-        </ul>
+        {/* エラーメッセージの表示 */}
+        {error && <p style={{ color: 'red' }}>{error}</p>}
+        {/* ローディング表示 */}
+        {loading ? (
+          <p>読み込み中...</p>
+        ) : (
+          <ul>
+            {items.map((item) => (<li key={item.id}>{item.name}</li>))}
+          </ul>
+        )}
       </div>
     </div>
   );
