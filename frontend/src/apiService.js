@@ -18,3 +18,12 @@ export const getItems = () => {
 export const createItem = (item) => {
   return apiClient.post('/items', item);
 };
+
+// Festival API
+export const getFestivals = () => {
+  return apiClient.get('/festivals');
+};
+
+export const createFestival = (festival) => {
+  return apiClient.post('/festivals', festival);
+};

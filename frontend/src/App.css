@@ -99,3 +99,18 @@ ul {
   list-style: none;
   padding: 0;
 }
+
+/* テーブル用のスタイル */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+th, td {
+  border-bottom: 1px solid #ddd;
+  padding: 12px;
+  text-align: left;
+}
+th {
+  background-color: #f8f8f8;
+}
