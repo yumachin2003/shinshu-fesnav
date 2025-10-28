@@ -11,15 +11,15 @@ class Festivals(db.Model):
    attendance = db.Column(db.Integer, default=0)   #動員数
    attend_year = db.Column(db.Integer, default=0)
 
-   def to_dict(self):
-      return {
-         'id': self.id,
-         'name': self.name,
-         # dateオブジェクトは文字列に変換しないとJSONにできない
-         'date': self.date.strftime('%Y-%m-%d') if self.date else None,
-         'location': self.location,
-         'latitude': self.latitude,
-         'longitude': self.longitude,
-         'attendance': self.attendance,
-         'attend_year': self.attend_year,
-      }
+# JSONに変換するためのヘルパー関数
+def to_dict(self):
+    return {
+        'id': self.id,
+        'name': self.name,
+        'date': self.date.strftime('%Y-%m-%d') if self.date else None,
+        'location': self.location,
+        'latitude': self.latitude,
+        'longitude': self.longitude,
+        'attendance': self.attendance,
+        'attend_year': self.attend_year,
+        }
