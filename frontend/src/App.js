@@ -36,20 +36,25 @@ export default function App() {
     // UserContext.Providerで、userとsetUserを子コンポーネントに提供
     <UserContext.Provider value={{ user, setUser }}>
       <Router>
-        {/* ナビゲーションバー */}
-        <nav style={{ padding: "1rem", borderBottom: "1px solid #ccc" }}>
-          <Link to="/festivals" style={{ marginRight: "1rem" }}>お祭り</Link>
-          <Link to="/items" style={{ marginRight: "1rem" }}>アイテム管理</Link> {/* 新しいページへのリンクを追加 */}
-          <Link to="/account">アカウント</Link>
-        </nav>
-        {/* ルーティング設定 */}
-        <Routes>
-          <Route path="/" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/festivals" element={<FestivalPage />} />
-          <Route path="/items" element={<ItemManagementPage />} /> {/* 新しいページのルートを追加 */}
-          <Route path="/account" element={<AccountPage />} />
-        </Routes>
+        <div className="App">
+          <header>
+            <h1>信州お祭りナビ</h1>
+            {/* ナビゲーションバー */}
+            <nav style={{ padding: "1rem", borderBottom: "1px solid #ccc", width: '100%', textAlign: 'center' }}>
+              <Link to="/festivals" style={{ marginRight: "1rem" }}>お祭り</Link>
+              <Link to="/items" style={{ marginRight: "1rem" }}>アイテム管理</Link> {/* 新しいページへのリンクを追加 */}
+              <Link to="/account">アカウント</Link>
+            </nav>
+          </header>
+          {/* ルーティング設定 */}
+          <Routes>
+            <Route path="/" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/festivals" element={<FestivalPage />} />
+            <Route path="/items" element={<ItemManagementPage />} /> {/* 新しいページのルートを追加 */}
+            <Route path="/account" element={<AccountPage />} />
+          </Routes>
+        </div>
       </Router>
     </UserContext.Provider>
   );

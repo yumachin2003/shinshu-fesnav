@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from "react";
-import { festivals } from "./FestivalData";
 import StarRating from "./StarRating";
 import Favorite from "./Favorite";
 import { UserContext } from "./App";
+import { getFestivals } from "./apiService"; // APIサービスをインポート
 
 const safeParse = (key, fallback = {}) => {
   try {
@@ -17,12 +17,35 @@ export default function FestivalPage() {
   const { user } = useContext(UserContext);
   const username = user?.username || null;
 
+  const [festivals, setFestivals] = useState([]); // APIから取得したお祭りデータ
+  const [isLoading, setIsLoading] = useState(true); // ローディング状態
+  const [error, setError] = useState(null); // エラー状態
+
   const [ratings, setRatings] = useState({});
   const [favorites, setFavorites] = useState({});
   const [diaries, setDiaries] = useState({});
   const [newDiary, setNewDiary] = useState({});
   const [newImage, setNewImage] = useState({});
   const [editing, setEditing] = useState({});
+
+  // APIからお祭りデータを取得する
+  useEffect(() => {
+    const fetchFestivals = async () => {
+      try {
+        const response = await getFestivals();
+        setFestivals(response.data);
+      } catch (err) {
+        console.error("データ取得エラー:", err);
+        setError("お祭り情報を読み込めませんでした。");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (username) {
+      fetchFestivals();
+    }
+  }, [username]);
 
   useEffect(() => {
     if (!username) return;
@@ -141,11 +164,20 @@ export default function FestivalPage() {
       </div>
     );
 
+  // ローディング中の表示
+  if (isLoading) {
+    return <div style={{ padding: "2rem" }}>読み込み中...</div>;
+  }
+
+  // エラー発生時の表示
+  if (error) {
+    return <div style={{ padding: "2rem", color: 'red' }}>🚨 {error}</div>;
+  }
+
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       {/* 🌐 言語切り替え */}
     <div id="google_translate_element" style={{ position: "fixed", top: 10, right: 10, zIndex: 9999 }}></div>
-      <h1>長野県のお祭り</h1>
 
       {festivals.map((f) => (
         <div
