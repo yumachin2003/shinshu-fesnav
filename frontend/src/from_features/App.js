@@ -1,25 +1,25 @@
+// 必要なモジュールやコンポーネントのインポート
 import React, { useState, useEffect } from 'react';
-import FestivalViewSwitcher from './components/FestivalViewSwitcher'; // 新しく作った切り替えコンポーネントをインポート
+import FestivalViewSwitcher from './components/FestivalViewSwitcher';
 import './App.css'; 
 
+// アプリケーションのメインコンポーネント
 function App() {
-    // 取得したお祭りデータを格納するための状態変数
-    const [festivals, setFestivals] = useState([]);
-    // データ取得中の状態を管理するための状態変数
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [festivals, setFestivals] = useState([]); // お祭りデータ用のstate
+    const [isLoading, setIsLoading] = useState(true);   // ローディング状態用のstate
+    const [error, setError] = useState(null);   // エラー状態用のstate
 
-    // ★データを一度だけ取得する処理（useEffect）をApp.jsに移動！
+    // 初回レンダリング時にAPIからお祭りデータを取得
     useEffect(() => {
-        const API_URL = 'http://localhost:5000/api/festivals'; 
+        const API_URL = 'http://localhost:5000/api/festivals';  // APIエンドポイントのURL
+        // 非同期でお祭りデータを取得する関数
         const fetchFestivals = async () => {
             try {
                 const response = await fetch(API_URL);
                 if (!response.ok) {
-                    throw new Error(`HTTP Error: ${response.status}`);
+                    throw new Error(`HTTPエラー: ${response.status}`);
                 }
                 const data = await response.json();
-                // ★ここで全データが取得されます
                 setFestivals(data); 
             } catch (err) {
                 console.error("データ取得エラー:", err);
@@ -31,22 +31,24 @@ function App() {
         fetchFestivals();
     }, []);
 
+    // ローディング中の表示
     if (isLoading) {
-        return <div className="loading-message">信州のお祭り情報を読み込み中... 🏮</div>;
+        return <div className="loading-message">読み込み中...</div>;
     }
 
+    // エラー発生時の表示
     if (error) {
         return <div className="error-message">🚨 {error}</div>;
     }
     
-    // データが取得できたら、ViewSwitcherにデータを渡す
+    // データ取得後のメインコンテンツ表示
     return (
         <div className="App">
             <header className="App-header">
                 <h1>信州お祭りナビ</h1>
             </header>
             <main>
-                {/* FestivalViewSwitcherに取得したデータを渡す */}
+                {/* FestivalViewSwitcherコンポーネントに取得したデータを渡して表示 */}
                 <FestivalViewSwitcher festivals={festivals} />
             </main>
         </div>
