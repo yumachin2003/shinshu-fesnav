@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { festivals } from "./FestivalData";
 import { UserContext } from "./App";
 import StarRating from "./StarRating";
+import { initGoogleTranslate } from "./utils/translate"; // ✅ 翻訳機能の初期化関数をインポート
 
 const safeParse = (key, fallback = {}) => {
   try {
@@ -21,6 +22,11 @@ export default function AccountPage() {
   const [ratings, setRatings] = useState({});
   const [diaries, setDiaries] = useState({});
   const [editLogs, setEditLogs] = useState([]);
+
+  // ✅ 翻訳機能の初期化（右下に配置）
+  useEffect(() => {
+    initGoogleTranslate();
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -56,7 +62,6 @@ export default function AccountPage() {
 
   const allPhotos = Object.values(diaries).flat().filter((e) => e.image);
 
-  // ✅ CSV出力機能
   const handleExportCSV = () => {
     if (editLogs.length === 0) {
       alert("出力する編集履歴がありません。");
@@ -86,8 +91,21 @@ export default function AccountPage() {
 
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      {/* 🌐 言語切り替え */}
-    <div id="google_translate_element" style={{ position: "fixed", top: 10, right: 10, zIndex: 9999 }}></div>
+      {/* 🌐 Google翻訳ウィジェット（右下固定） */}
+      <div
+        id="google_translate_element"
+        style={{
+          position: "fixed",
+          bottom: 10,
+          right: 10,
+          zIndex: 9999,
+          background: "white",
+          borderRadius: "6px",
+          padding: "4px",
+          boxShadow: "0 0 6px rgba(0,0,0,0.1)",
+        }}
+      ></div>
+
       {/* 上部固定ログアウト */}
       <div
         style={{
@@ -232,7 +250,6 @@ export default function AccountPage() {
         <p>まだ写真がありません。</p>
       )}
 
-      {/* 🕒 編集履歴ログ */}
       <h2 style={{ marginTop: "2rem" }}>🕒 編集履歴ログ</h2>
 
       {editLogs.length > 0 && (
