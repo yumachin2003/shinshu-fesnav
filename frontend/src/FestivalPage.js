@@ -3,6 +3,7 @@ import { festivals } from "./FestivalData";
 import StarRating from "./StarRating";
 import Favorite from "./Favorite";
 import { UserContext } from "./App";
+import { initGoogleTranslate } from "./utils/translate";  // ✅ 追加
 
 const safeParse = (key, fallback = {}) => {
   try {
@@ -17,6 +18,11 @@ export default function FestivalPage() {
   const { user } = useContext(UserContext);
   const username = user?.username || null;
 
+  // ✅ 翻訳機能の初期化
+  useEffect(() => {
+    initGoogleTranslate();
+  }, []);
+  
   const [ratings, setRatings] = useState({});
   const [favorites, setFavorites] = useState({});
   const [diaries, setDiaries] = useState({});
