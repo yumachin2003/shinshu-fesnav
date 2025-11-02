@@ -1,12 +1,18 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { UserContext } from "./App";
+import { initGoogleTranslate } from "./utils/translate"; // ✅ 翻訳機能を追加
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
   const { setUser } = useContext(UserContext);
+
+  // ✅ 翻訳機能 初期化（左下に表示）
+  useEffect(() => {
+    initGoogleTranslate();
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -27,6 +33,9 @@ export default function LoginPage() {
 
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
+      {/* 🌐 左下に翻訳ウィジェット */}
+      <div id="google_translate_element"></div>
+
       <h1>ログイン</h1>
       <form onSubmit={handleSubmit}>
         <input
@@ -48,7 +57,8 @@ export default function LoginPage() {
         <button type="submit">ログイン</button>
       </form>
       <p>
-        アカウントをお持ちでないですか？ <Link to="/register">新規登録</Link>
+        アカウントをお持ちでないですか？{" "}
+        <Link to="/register">新規登録</Link>
       </p>
     </div>
   );
