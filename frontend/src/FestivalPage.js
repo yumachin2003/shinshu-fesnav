@@ -1,9 +1,11 @@
+// src/FestivalPage.js
 import React, { useState, useEffect, useContext } from "react";
 import { festivals } from "./FestivalData";
 import StarRating from "./StarRating";
 import Favorite from "./Favorite";
 import { UserContext } from "./App";
-import { initGoogleTranslate } from "./utils/translate";  // ✅ 追加
+import { initGoogleTranslate } from "./utils/translate";
+import { addEditLog } from "./utils/editLog";  // ✅ 追加
 
 const safeParse = (key, fallback = {}) => {
   try {
@@ -22,7 +24,7 @@ export default function FestivalPage() {
   useEffect(() => {
     initGoogleTranslate();
   }, []);
-  
+
   const [ratings, setRatings] = useState({});
   const [favorites, setFavorites] = useState({});
   const [diaries, setDiaries] = useState({});
@@ -38,7 +40,11 @@ export default function FestivalPage() {
   }, [username]);
 
   const saveData = (key, data) => {
-    localStorage.setItem(`${key}_${username}`, JSON.stringify(data));
+    try {
+      localStorage.setItem(`${key}_${username}`, JSON.stringify(data));
+    } catch (error) {
+      alert("保存できません：容量制限を超えています。不要な日記を削除してください。");
+    }
   };
 
   const saveFavorites = (updated) => {
@@ -56,19 +62,6 @@ export default function FestivalPage() {
     saveData("festivalDiaries", updated);
   };
 
-  // ✅ 編集履歴ログの保存
-  const addEditLog = (festivalId, content) => {
-    const f = festivals.find((x) => x.id === festivalId);
-    const logs = safeParse(`festivalEditLogs_${username}`, []);
-    const newLog = {
-      festival: f?.name || "不明なお祭り",
-      content,
-      date: new Date().toLocaleString(),
-    };
-    const updatedLogs = [...logs, newLog];
-    localStorage.setItem(`festivalEditLogs_${username}`, JSON.stringify(updatedLogs));
-  };
-
   // ✅ 新規・編集共通の保存処理
   const handleSaveDiary = (id) => {
     const text = newDiary[id]?.trim();
@@ -84,7 +77,7 @@ export default function FestivalPage() {
           ? { ...d, text, image: newImage[id] ?? d.image, date: now }
           : d
       );
-      addEditLog(id, `日記を編集しました: ${text}`);
+      addEditLog(username, id, `日記を編集しました: ${text}`);
       setEditing((prev) => ({ ...prev, [id]: null }));
     } else {
       const newEntry = {
@@ -94,7 +87,7 @@ export default function FestivalPage() {
         date: now,
       };
       updated[id] = [...(updated[id] || []), newEntry];
-      addEditLog(id, `新しい日記を投稿しました: ${text}`);
+      addEditLog(username, id, `新しい日記を投稿しました: ${text}`);
     }
 
     saveDiaries(updated);
@@ -112,7 +105,7 @@ export default function FestivalPage() {
       [id]: diaries[id].filter((entry) => entry.timestamp !== timestamp),
     };
     saveDiaries(updated);
-    addEditLog(id, "日記を削除しました。");
+    addEditLog(username, id, "日記を削除しました。");
   };
 
   const handleEditDiary = (id, entry) => {
@@ -150,7 +143,7 @@ export default function FestivalPage() {
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       {/* 🌐 言語切り替え */}
-    <div id="google_translate_element" style={{ position: "fixed", top: 10, right: 10, zIndex: 9999 }}></div>
+      <div id="google_translate_element" style={{ position: "fixed", top: 10, right: 10, zIndex: 9999 }}></div>
       <h1>長野県のお祭り</h1>
 
       {festivals.map((f) => (
@@ -173,23 +166,6 @@ export default function FestivalPage() {
               saveFavorites(updated);
             }}
           />
-          {favorites[f.id] && (
-            <button
-              onClick={() => {
-                const updated = { ...favorites, [f.id]: false };
-                saveFavorites(updated);
-              }}
-              style={{
-                marginLeft: "10px",
-                backgroundColor: "#ffdddd",
-                border: "1px solid #ff9999",
-                borderRadius: "5px",
-                cursor: "pointer",
-              }}
-            >
-              お気に入り解除
-            </button>
-          )}
 
           <StarRating
             count={5}
@@ -200,6 +176,7 @@ export default function FestivalPage() {
             }}
           />
 
+          {/* ✏️ 日記入力欄 */}
           <div style={{ marginTop: "1rem" }}>
             <textarea
               placeholder="今日の日記を書こう！"
@@ -260,6 +237,7 @@ export default function FestivalPage() {
             </div>
           </div>
 
+          {/* 📔 日記一覧 */}
           {diaries[f.id] && diaries[f.id].length > 0 && (
             <div style={{ marginTop: "1rem" }}>
               <h3>📔 自分の日記一覧</h3>
