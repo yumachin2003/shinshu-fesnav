@@ -5,8 +5,9 @@ import Favorite from "./Favorite";
 import { UserContext } from "./App";
 import { getFestivals } from "./apiService"; // APIサービスをインポート
 import { initGoogleTranslate } from "./utils/translate";
-import { addEditLog } from "./utils/editLog";  // ✅ 追加
+import { addEditLog } from "./utils/editLog";
 
+// localStorageから安全にデータを取得する
 const safeParse = (key, fallback = {}) => {
   try {
     const item = localStorage.getItem(key);
@@ -23,6 +24,10 @@ export default function FestivalPage() {
   const [festivals, setFestivals] = useState([]); // APIから取得したお祭りデータ
   const [isLoading, setIsLoading] = useState(true); // ローディング状態
   const [error, setError] = useState(null); // エラー状態
+  // 翻訳機能の初期化
+  useEffect(() => {
+    initGoogleTranslate();
+  }, []);
 
   const [ratings, setRatings] = useState({});
   const [favorites, setFavorites] = useState({});
@@ -50,6 +55,7 @@ export default function FestivalPage() {
     }
   }, [username]);
 
+  // ユーザーごとのデータをロード
   useEffect(() => {
     if (!username) return;
     setRatings(safeParse(`festivalRatings_${username}`, {}));
@@ -80,7 +86,7 @@ export default function FestivalPage() {
     saveData("festivalDiaries", updated);
   };
 
-  // ✅ 新規・編集共通の保存処理
+  // 日記保存（新規・編集共通）
   const handleSaveDiary = (id) => {
     const text = newDiary[id]?.trim();
     if (!text && !newImage[id]) return;
@@ -113,11 +119,9 @@ export default function FestivalPage() {
     setNewImage((prev) => ({ ...prev, [id]: null }));
   };
 
-  // ✅ 削除
+  // 日記削除
   const handleDeleteDiary = (id, timestamp) => {
-    const confirmDelete = window.confirm("この日記を削除しますか？");
-    if (!confirmDelete) return;
-
+    if (!window.confirm("この日記を削除しますか？")) return;
     const updated = {
       ...diaries,
       [id]: diaries[id].filter((entry) => entry.timestamp !== timestamp),
@@ -126,20 +130,22 @@ export default function FestivalPage() {
     addEditLog(username, id, "日記を削除しました。");
   };
 
+  // 日記編集開始
   const handleEditDiary = (id, entry) => {
     setNewDiary((prev) => ({ ...prev, [id]: entry.text }));
     setNewImage((prev) => ({ ...prev, [id]: entry.image || null }));
     setEditing((prev) => ({ ...prev, [id]: entry.timestamp }));
   };
 
+  // 編集キャンセル
   const handleCancelEdit = (id) => {
-    const confirmCancel = window.confirm("編集をキャンセルしますか？\n変更内容は保存されません。");
-    if (!confirmCancel) return;
+    if (!window.confirm("編集をキャンセルしますか？\n変更内容は保存されません。")) return;
     setNewDiary((prev) => ({ ...prev, [id]: "" }));
     setNewImage((prev) => ({ ...prev, [id]: null }));
     setEditing((prev) => ({ ...prev, [id]: null }));
   };
 
+  // 画像アップロード
   const handleImageUpload = (e, id) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -170,8 +176,10 @@ export default function FestivalPage() {
 
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      {/* 🌐 言語切り替え */}
-    <div id="google_translate_element" style={{ position: "fixed", top: 10, right: 10, zIndex: 9999 }}></div>
+      {/* 翻訳ウィジェット */}
+      <div id="google_translate_element" style={{ position: "fixed", bottom: 10, left: 10, zIndex: 9999 }}></div>
+
+      <h1>長野県のお祭り</h1>
 
       {festivals.map((f) => (
         <div
@@ -186,6 +194,7 @@ export default function FestivalPage() {
         >
           <h2>{f.name}</h2>
 
+          {/* お気に入り */}
           <Favorite
             selected={favorites[f.id]}
             onToggle={() => {
@@ -194,6 +203,7 @@ export default function FestivalPage() {
             }}
           />
 
+          {/* 評価 */}
           <StarRating
             count={5}
             value={ratings[f.id] || 0}
@@ -203,7 +213,7 @@ export default function FestivalPage() {
             }}
           />
 
-          {/* ✏️ 日記入力欄 */}
+          {/* 日記入力欄 */}
           <div style={{ marginTop: "1rem" }}>
             <textarea
               placeholder="今日の日記を書こう！"
@@ -223,11 +233,7 @@ export default function FestivalPage() {
               <img
                 src={newImage[f.id]}
                 alt="プレビュー"
-                style={{
-                  width: "100%",
-                  marginTop: "0.5rem",
-                  borderRadius: "8px",
-                }}
+                style={{ width: "100%", marginTop: "0.5rem", borderRadius: "8px" }}
               />
             )}
             <div style={{ marginTop: "0.5rem" }}>
@@ -245,7 +251,6 @@ export default function FestivalPage() {
               >
                 {editing[f.id] ? "更新する" : "日記を保存"}
               </button>
-
               {editing[f.id] && (
                 <button
                   onClick={() => handleCancelEdit(f.id)}
@@ -264,7 +269,7 @@ export default function FestivalPage() {
             </div>
           </div>
 
-          {/* 📔 日記一覧 */}
+          {/* 日記一覧 */}
           {diaries[f.id] && diaries[f.id].length > 0 && (
             <div style={{ marginTop: "1rem" }}>
               <h3>📔 自分の日記一覧</h3>
@@ -282,12 +287,7 @@ export default function FestivalPage() {
                     <img
                       src={entry.image}
                       alt="投稿写真"
-                      style={{
-                        width: "100%",
-                        maxWidth: "400px",
-                        borderRadius: "8px",
-                        marginBottom: "0.5rem",
-                      }}
+                      style={{ width: "100%", maxWidth: "400px", borderRadius: "8px", marginBottom: "0.5rem" }}
                     />
                   )}
                   <p>{entry.text}</p>
