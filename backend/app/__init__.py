@@ -10,8 +10,6 @@ def create_app():
     """Application-factory function"""
     app = Flask(__name__, instance_relative_config=True)
 
-    CORS(app)
-
     # 設定の読み込み
     app.config.from_mapping(
         SQLALCHEMY_DATABASE_URI='sqlite:///fesData.db',
@@ -25,7 +23,11 @@ def create_app():
     with app.app_context():
         from . import routes
         from . import api_routes
+        app.register_blueprint(routes.main_bp)
         app.register_blueprint(api_routes.api_bp)
+        
+        # APIルートに対してCORSを有効にする
+        CORS(app, resources={r"/api/*": {"origins": "*"}})
 
         db.create_all()
 

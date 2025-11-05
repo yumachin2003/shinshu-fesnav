@@ -1,9 +1,11 @@
-from flask import render_template, request, redirect, url_for, current_app
+from flask import render_template, request, redirect, url_for, Blueprint
 from datetime import datetime
 from . import db
 from .models import Festivals
 
-@current_app.route('/add', methods=['GET', 'POST'])
+main_bp = Blueprint('main', __name__)
+
+@main_bp.route('/add', methods=['GET', 'POST'])
 def add_festival():
     if request.method == 'POST':
         fesName = request.form['name']
@@ -24,14 +26,14 @@ def add_festival():
         try:
             db.session.add(new_festival)
             db.session.commit()
-            return redirect(url_for('add_festival'))
+            return redirect(url_for('main.add_festival'))
         except Exception as e:
             db.session.rollback()
             return f"データ登録中にエラーが発生しました: {e}", 500
 
     return render_template('add_festival.html')
 
-@current_app.route('/')
+@main_bp.route('/')
 def index():
     festivals = Festivals.query.all()
     return render_template('index.html', festivals=festivals)
