@@ -6,7 +6,6 @@ import RegisterPage from "./RegisterPage";
 import FestivalPage from "./FestivalPage";
 import AccountPage from "./AccountPage";
 import ItemManagementPage from "./ItemManagementPage";
-import ConnectionStatus from "./ConnectionStatus"; // <-- ADD THIS
 
 // ユーザー情報共有のためのContext作成
 export const UserContext = React.createContext();
@@ -37,7 +36,6 @@ export default function App() {
     // UserContext.Providerで、userとsetUserを子コンポーネントに提供
     <UserContext.Provider value={{ user, setUser }}>
       <Router>
-        <ConnectionStatus /> {/* <-- ADD THIS */}
         <div className="App">
           <header>
             <h1>信州お祭りナビ</h1>
