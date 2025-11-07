@@ -1,6 +1,7 @@
 import React, { useState, useContext, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { UserContext } from "./App";
+import { loginUser } from "./utils/apiService"; // 修正
 import { initGoogleTranslate } from "./utils/translate"; // ✅ 翻訳機能を追加
 
 export default function LoginPage() {
@@ -14,19 +15,24 @@ export default function LoginPage() {
     initGoogleTranslate();
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const users = JSON.parse(localStorage.getItem("users")) || [];
-    const foundUser = users.find(
-      (u) => u.username === username && u.password === password
-    );
+    try {
+      // バックエンドのログインAPIにリクエストを送信
+      const response = await loginUser({ username, password });
 
-    if (foundUser) {
-      setUser(foundUser);
-      localStorage.setItem("loggedInUser", JSON.stringify(foundUser));
-      navigate("/festivals");
-    } else {
+      // レスポンスからトークンとユーザー情報を取得
+      // バックエンドのレスポンス形式に合わせてキー名（token, user）を調整してください。
+      const { token, user } = response.data;
+
+      // ★'authToken' というキーでトークンをlocalStorageに保存
+      localStorage.setItem("authToken", token);
+      localStorage.setItem("user", JSON.stringify(user)); // ユーザー情報も保存
+      setUser(user); // Appコンテキストのユーザー情報を更新
+      navigate("/festivals"); // ログイン成功後、お祭り一覧ページに遷移
+    } catch (error) {
+      console.error("ログインに失敗しました:", error);
       alert("ユーザー名またはパスワードが違います。");
     }
   };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { initGoogleTranslate } from "./utils/translate"; // ✅ 翻訳機能を追加
+import { registerUser } from "./utils/apiService"; // 修正
 
 export default function RegisterPage() {
   const [username, setUsername] = useState("");
@@ -12,22 +13,24 @@ export default function RegisterPage() {
     initGoogleTranslate();
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const users = JSON.parse(localStorage.getItem("users")) || [];
+    try {
+      // バックエンドの/api/registerエンドポイントにデータを送信
+      await registerUser({ username, password });
 
-    if (users.some((u) => u.username === username)) {
-      alert("このユーザー名は既に使われています。");
-      return;
+      alert("登録が完了しました！ログインページに移動します。");
+      navigate("/"); // 登録成功後、ログインページに遷移
+    } catch (error) {
+      // バックエンドから返されたエラーメッセージを表示
+      if (error.response && error.response.data && error.response.data.error) {
+        alert(error.response.data.error);
+      } else {
+        console.error("Registration failed:", error);
+        alert("登録に失敗しました。後ほどもう一度お試しください。");
+      }
     }
-
-    const newUser = { username, password };
-    users.push(newUser);
-    localStorage.setItem("users", JSON.stringify(users));
-
-    alert("登録が完了しました！");
-    navigate("/");
   };
 
   return (

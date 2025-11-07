@@ -6,6 +6,7 @@ import RegisterPage from "./RegisterPage";
 import FestivalPage from "./FestivalPage";
 import AccountPage from "./AccountPage";
 import ItemManagementPage from "./ItemManagementPage";
+import ConnectionStatus from "./ConnectionStatus"; // <-- ADD THIS
 
 // ユーザー情報共有のためのContext作成
 export const UserContext = React.createContext();
@@ -22,20 +23,21 @@ const safeParse = (key) => {
 // アプリケーションのメインコンポーネント
 export default function App() {
   // ユーザー情報の状態管理。初期値はlocalStorageから読み込み
-  const [user, setUser] = useState(() => safeParse("loggedInUser"));
+  const [user, setUser] = useState(() => safeParse("user"));
 
-  // userの状態変更時にlocalStorageを更新
+  // アプリケーション起動時に一度だけ実行
   useEffect(() => {
-    // ユーザー情報があればlocalStorageに保存
-    if (user) localStorage.setItem("loggedInUser", JSON.stringify(user));
-    // ユーザー情報がなければlocalStorageから削除
-    else localStorage.removeItem("loggedInUser");
-  }, [user]);
+    // localStorageから認証トークンを確認
+    const token = localStorage.getItem('authToken');
+    // トークンがない（＝未ログイン）場合は、ユーザー情報をクリア
+    if (!token) setUser(null);
+  }, []);
 
   return (
     // UserContext.Providerで、userとsetUserを子コンポーネントに提供
     <UserContext.Provider value={{ user, setUser }}>
       <Router>
+        <ConnectionStatus /> {/* <-- ADD THIS */}
         <div className="App">
           <header>
             <h1>信州お祭りナビ</h1>

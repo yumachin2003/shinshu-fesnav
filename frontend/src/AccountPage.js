@@ -1,8 +1,8 @@
 // src/AccountPage.js
 import React, { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { festivals } from "./FestivalData";
 import { UserContext } from "./App";
+import { getFestivals } from "./utils/apiService"; // APIサービスをインポート
 import StarRating from "./StarRating";
 import { initGoogleTranslate } from "./utils/translate"; // 翻訳機能
 import { addEditLog, getAllEditLogs } from "./utils/editLog"; // 履歴機能
@@ -24,12 +24,27 @@ export default function AccountPage() {
   const [ratings, setRatings] = useState({});
   const [diaries, setDiaries] = useState({});
   const [editLogs, setEditLogs] = useState([]);
+  const [festivals, setFestivals] = useState([]); // お祭りデータを保持するstate
   const [showAllLogs, setShowAllLogs] = useState(false); // UIトグルのみ
 
   // Google翻訳初期化
   useEffect(() => initGoogleTranslate(), []);
 
-  // ユーザーデータ読み込み（初回のみ）
+  useEffect(() => {
+    // コンポーネントがマウントされたら、一度だけお祭りデータを取得する
+    // APIからお祭りデータを取得
+    const fetchFestivals = async () => {
+      try {
+        const response = await getFestivals();
+        setFestivals(response.data);
+      } catch (error) {
+        console.error("お祭りデータの読み込みに失敗しました。", error);
+      }
+    };
+    fetchFestivals();
+  }, []); // 依存配列を空にすることで、初回レンダリング時に一度だけ実行される
+
+  // ユーザーデータ読み込み
   useEffect(() => {
     if (!user) return;
 
@@ -69,11 +84,11 @@ export default function AccountPage() {
   const allPhotos = Object.values(diaries).flat(1).filter((e) => e.image);
 
   // 編集履歴追加
-  const logEditAction = (festivalId, content) => {
-    addEditLog(user.username, festivalId, content); // localStorage 更新
+  const logEditAction = (festival, content) => {
+    addEditLog(user.username, festival.id, festival.name, content); // localStorage 更新
 
     const newLog = {
-      festival: festivals.find((f) => f.id === festivalId)?.name || "",
+      festival: festival.name,
       content,
       date: new Date().toLocaleString(),
     };
@@ -94,7 +109,7 @@ export default function AccountPage() {
         timestamp: Date.now(),
       });
       saveDiaries(updated);
-      logEditAction(fid, "写真を追加しました");
+      logEditAction(festivals.find(f => f.id === fid), "写真を追加しました");
     };
     reader.readAsDataURL(file);
   };
@@ -104,7 +119,7 @@ export default function AccountPage() {
     const updated = { ...diaries };
     updated[fid] = updated[fid].filter((x) => x.timestamp !== timestamp);
     saveDiaries(updated);
-    logEditAction(fid, "写真を削除しました");
+    logEditAction(festivals.find(f => f.id === fid), "写真を削除しました");
   };
 
   // 写真操作: 差し替え
@@ -116,7 +131,7 @@ export default function AccountPage() {
       if (idx !== -1) {
         updated[fid][idx].image = reader.result;
         saveDiaries(updated);
-        logEditAction(fid, "写真を変更しました");
+        logEditAction(festivals.find(f => f.id === fid), "写真を変更しました");
       }
     };
     reader.readAsDataURL(file);
@@ -209,7 +224,7 @@ export default function AccountPage() {
             onRate={(r) => {
               const updated = { ...ratings, [f.id]: r };
               saveRatings(updated);
-              logEditAction(f.id, `星評価を ${r} に変更しました`);
+              logEditAction(f, `星評価を ${r} に変更しました`);
             }}
           />
         </div>
@@ -229,7 +244,7 @@ export default function AccountPage() {
                   onClick={() => {
                     const updated = { ...favorites, [fid]: false };
                     saveFavorites(updated);
-                    logEditAction(f.id, "お気に入りを解除しました");
+                    logEditAction(f, "お気に入りを解除しました");
                   }}
                   style={{
                     marginLeft: "10px",
@@ -268,7 +283,7 @@ export default function AccountPage() {
                     );
                     updated[fid][idx].text = e.target.value;
                     saveDiaries(updated);
-                    logEditAction(f.id, "日記内容を編集しました");
+                    logEditAction(f, "日記内容を編集しました");
                   }}
                   style={{ width: "100%", height: "60px" }}
                 />
