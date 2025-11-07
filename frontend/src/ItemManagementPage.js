@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 // API通信ロジックを分離したモジュールをインポート
-import { getFestivals, createFestival } from './apiService';
+import { getFestivals, createFestival } from './utils/apiService';
 
 const INITIAL_STATE = {
   name: '',

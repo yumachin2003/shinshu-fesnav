@@ -1,7 +1,5 @@
 // src/utils/editLog.js
 
-import { festivals } from "../FestivalData";
-
 /**
  * 履歴データをlocalStorageから取得する（ユーザーごと）
  * @param {string} username
@@ -29,17 +27,16 @@ export const saveUserLogs = (username, logs) => {
  * 編集履歴を追加する
  * @param {string} username
  * @param {number} festivalId
+ * @param {string} festivalName - お祭り名
  * @param {string} content
  * @returns {Array} 更新後の履歴配列
  */
-export const addEditLog = (username, festivalId, content) => {
+export const addEditLog = (username, festivalId, festivalName, content) => {
   if (!username) return [];
   const logs = getUserLogs(username);
-  const festival = festivals.find((f) => f.id === Number(festivalId));
-  const name = festival ? festival.name : "不明なお祭り";
 
   const newLog = {
-    festival: name,
+    festival: festivalName || "不明なお祭り",
     content,
     date: new Date().toLocaleString(),
   };

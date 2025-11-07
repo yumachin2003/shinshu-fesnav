@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext } from "react";
 import StarRating from "./StarRating";
 import Favorite from "./Favorite";
 import { UserContext } from "./App";
-import { getFestivals } from "./apiService"; // APIサービスをインポート
+import { getFestivals } from "./utils/apiService"; // APIサービスをインポート
 import { initGoogleTranslate } from "./utils/translate";
 import { addEditLog } from "./utils/editLog";
 
@@ -38,6 +38,7 @@ export default function FestivalPage() {
 
   // APIからお祭りデータを取得する
   useEffect(() => {
+    // ログイン状態に関わらず、コンポーネントがマウントされたら一度だけお祭りデータを取得
     const fetchFestivals = async () => {
       try {
         const response = await getFestivals();
@@ -50,10 +51,8 @@ export default function FestivalPage() {
       }
     };
 
-    if (username) {
-      fetchFestivals();
-    }
-  }, [username]);
+    fetchFestivals();
+  }, []); // 依存配列を空にして、初回レンダリング時のみ実行
 
   // ユーザーごとのデータをロード
   useEffect(() => {
@@ -101,7 +100,8 @@ export default function FestivalPage() {
           ? { ...d, text, image: newImage[id] ?? d.image, date: now }
           : d
       );
-      addEditLog(username, id, `日記を編集しました: ${text}`);
+      const festivalName = festivals.find(f => f.id === id)?.name;
+      addEditLog(username, id, festivalName, `日記を編集しました: ${text}`);
       setEditing((prev) => ({ ...prev, [id]: null }));
     } else {
       const newEntry = {
@@ -111,7 +111,8 @@ export default function FestivalPage() {
         date: now,
       };
       updated[id] = [...(updated[id] || []), newEntry];
-      addEditLog(username, id, `新しい日記を投稿しました: ${text}`);
+      const festivalName = festivals.find(f => f.id === id)?.name;
+      addEditLog(username, id, festivalName, `新しい日記を投稿しました: ${text}`);
     }
 
     saveDiaries(updated);
@@ -127,7 +128,8 @@ export default function FestivalPage() {
       [id]: diaries[id].filter((entry) => entry.timestamp !== timestamp),
     };
     saveDiaries(updated);
-    addEditLog(username, id, "日記を削除しました。");
+    const festivalName = festivals.find(f => f.id === id)?.name;
+    addEditLog(username, id, festivalName, "日記を削除しました。");
   };
 
   // 日記編集開始
