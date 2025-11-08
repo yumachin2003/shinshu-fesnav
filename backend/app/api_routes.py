@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app, g
-from .models import Festivals, User
-from datetime import datetime
+from .models import Festivals, User, UserFavorite, UserDiary, EditLog
+from datetime import datetime, timedelta
 from . import db
 import jwt
 import datetime
@@ -13,9 +13,8 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        # プリフライトリクエスト(OPTIONS)の場合は、トークンチェックをスキップする
-        if request.method == 'OPTIONS':
-            return f(*args, **kwargs)
+        if request.method == 'OPTIONS': # CORSのプリフライトリクエストは認証不要で通過させる
+            return jsonify({'message': 'Preflight request successful'}), 200
 
         token = None
         # リクエストヘッダーからAuthorizationトークンを取得
@@ -64,12 +63,18 @@ def add_festival():
     if not data or not data.get('name') or not data.get('date') or not data.get('location'):
         return jsonify({'error': 'Name, date, and location are required'}), 400
 
+    # 同じ名前と日付のお祭りが既に存在するかチェック
+    existing_festival = Festivals.query.filter_by(name=data['name'], date=data['date']).first()
+    if existing_festival:
+        return jsonify({'error': '同じ名前と日付のお祭りが既に存在します。'}), 409 # 409 Conflict
+
     try:
-        # 日付文字列をdatetimeオブジェクトに変換
-        fes_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        # 日付文字列の形式を検証
+        fes_date = datetime.datetime.strptime(data['date'], '%Y-%m-%d').date()
     except ValueError:
         return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
 
+    # 文字列をdateオブジェクトに変換してから渡す
     new_festival = Festivals(name=data['name'], date=fes_date, location=data['location'])
     db.session.add(new_festival)
     db.session.commit()
@@ -80,10 +85,17 @@ def add_festival():
 # POST /api/register : 新規ユーザー登録
 @api_bp.route('/register', methods=['POST'])
 def register():
+    print(f"Register endpoint hit. Request method: {request.method}")
+    
     data = request.get_json()
+
+    if not data:
+        return jsonify({'error': 'リクエストボディが不正なJSON形式か空です'}), 400
+
     username = data.get('username')
     password = data.get('password')
 
+    # バリデーションを最初に行う
     if not username or not password:
         return jsonify({'error': 'ユーザー名とパスワードは必須です'}), 400
 
@@ -123,3 +135,120 @@ def login():
         })
 
     return jsonify({'error': 'ユーザー名またはパスワードが正しくありません'}), 401
+
+# --- Account API ---
+
+# GET /api/account/data : ログイン中のユーザーのアカウントデータを取得
+@api_bp.route('/account/data', methods=['GET'])
+@token_required
+def get_account_data():
+    user_id = g.current_user.id
+
+    # お気に入りデータの取得
+    favorites_list = UserFavorite.query.filter_by(user_id=user_id).all()
+    favorites = {str(fav.festival_id): True for fav in favorites_list}
+
+    # 日記データの取得
+    diaries_list = UserDiary.query.filter_by(user_id=user_id).order_by(UserDiary.timestamp.desc()).all()
+    diaries = {}
+    for entry in diaries_list:
+        if entry.festival_id not in diaries:
+            diaries[entry.festival_id] = []
+        diaries[entry.festival_id].append(entry.to_dict())
+
+    return jsonify({
+        'favorites': favorites,
+        'diaries': diaries
+    }), 200
+
+# POST /api/account/favorites : お気に入り情報を更新
+@api_bp.route('/account/favorites', methods=['POST'])
+@token_required
+def update_favorites():
+    user_id = g.current_user.id
+    data = request.get_json()
+    new_favorites = data.get('favorites', {})
+
+    # 既存のお気に入りをすべて削除
+    UserFavorite.query.filter_by(user_id=user_id).delete()
+
+    # 新しいお気に入りを追加
+    for festival_id_str, is_favorite in new_favorites.items():
+        if is_favorite:
+            try:
+                festival_id = int(festival_id_str)
+                new_fav = UserFavorite(user_id=user_id, festival_id=festival_id)
+                db.session.add(new_fav)
+            except ValueError:
+                return jsonify({'error': f'Invalid festival_id: {festival_id_str}'}), 400
+
+    db.session.commit()
+    return jsonify({'message': 'Favorites updated successfully'}), 200
+
+# POST /api/account/diaries : 日記情報を更新
+@api_bp.route('/account/diaries', methods=['POST'])
+@token_required
+def update_diaries():
+    user_id = g.current_user.id
+    data = request.get_json()
+    new_diaries_data = data.get('diaries', {})
+
+    # 既存の日記をすべて削除
+    UserDiary.query.filter_by(user_id=user_id).delete()
+
+    # 新しい日記を追加
+    for festival_id_str, entries in new_diaries_data.items():
+        try:
+            festival_id = int(festival_id_str)
+            for entry_data in entries:
+                new_diary = UserDiary(
+                    user_id=user_id,
+                    festival_id=festival_id,
+                    text=entry_data.get('text'),
+                    image=entry_data.get('image'),
+                    timestamp=entry_data.get('timestamp'),
+                    date=entry_data.get('date')
+                )
+                db.session.add(new_diary)
+        except ValueError:
+            return jsonify({'error': f'Invalid festival_id: {festival_id_str}'}), 400
+
+    db.session.commit()
+    return jsonify({'message': 'Diaries updated successfully'}), 200
+
+# --- EditLog API ---
+
+# GET /api/editlogs : ログイン中のユーザーの編集履歴を取得
+@api_bp.route('/editlogs', methods=['GET'])
+@token_required
+def get_edit_logs():
+    user_id = g.current_user.id
+    logs = EditLog.query.filter_by(user_id=user_id).order_by(EditLog.date.desc()).all()
+    return jsonify([log.to_dict() for log in logs]), 200
+
+# POST /api/editlogs : 新しい編集履歴を保存
+@api_bp.route('/editlogs', methods=['POST'])
+@token_required
+def add_edit_log():
+    data = request.get_json()
+    user_id = g.current_user.id
+
+    festival_id = data.get('festival_id')
+    festival_name = data.get('festival_name')
+    content = data.get('content')
+    date_str = data.get('date')
+
+    if not all([festival_id, festival_name, content, date_str]):
+        return jsonify({'error': 'Missing edit log data'}), 400
+
+    try:
+        # ISO形式の文字列をdatetimeオブジェクトに変換
+        # Python 3.11以降はfromisoformatがZを直接扱えるが、互換性のためreplace
+        log_date = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+    except ValueError:
+        return jsonify({'error': 'Invalid date format. Use ISO format.'}), 400
+
+    new_log = EditLog(user_id=user_id, festival_id=festival_id, festival_name=festival_name, content=content, date=log_date)
+    db.session.add(new_log)
+    db.session.commit()
+    return jsonify(new_log.to_dict()), 201

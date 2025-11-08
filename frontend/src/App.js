@@ -1,11 +1,11 @@
 // 必要なモジュールやコンポーネントのインポート
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import LoginPage from "./LoginPage";
-import RegisterPage from "./RegisterPage";
-import FestivalPage from "./FestivalPage";
-import AccountPage from "./AccountPage";
-import ItemManagementPage from "./ItemManagementPage";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Festival from "./pages/Festival";
+import Account from "./pages/Account";
+import ItemManagement from "./pages/ItemManagement";
 
 // ユーザー情報共有のためのContext作成
 export const UserContext = React.createContext();
@@ -48,11 +48,11 @@ export default function App() {
           </header>
           {/* ルーティング設定 */}
           <Routes>
-            <Route path="/" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/festivals" element={<FestivalPage />} />
-            <Route path="/items" element={<ItemManagementPage />} /> {/* 新しいページのルートを追加 */}
-            <Route path="/account" element={<AccountPage />} />
+            <Route path="/" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/festivals" element={<Festival />} />
+            <Route path="/items" element={<ItemManagement />} /> {/* 新しいページのルートを追加 */}
+            <Route path="/account" element={<Account />} />
           </Routes>
         </div>
       </Router>

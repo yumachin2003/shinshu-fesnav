@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { initGoogleTranslate } from "./utils/translate"; // ✅ 翻訳機能を追加
-import { registerUser } from "./utils/apiService"; // 修正
+import { initGoogleTranslate } from "../utils/translate";
+import { registerUser } from "../utils/apiService";
 
-export default function RegisterPage() {
+export default function Register() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();

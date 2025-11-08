@@ -1,100 +1,83 @@
-// src/AccountPage.js
 import React, { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
-import { UserContext } from "./App";
-import { getFestivals } from "./utils/apiService"; // APIサービスをインポート
-import StarRating from "./StarRating";
-import { initGoogleTranslate } from "./utils/translate"; // 翻訳機能
-import { addEditLog, getAllEditLogs } from "./utils/editLog"; // 履歴機能
+import { UserContext } from "../App";
+import { getFestivals, getAccountData, updateFavorites, updateDiaries, getEditLogs, addEditLogToBackend } from "../utils/apiService";
+import useApiData from '../hooks/useApiData';
+import { initGoogleTranslate } from "../utils/translate";
 
-const safeParse = (key, fallback = {}) => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-export default function AccountPage() {
+export default function Account() {
   const { user, setUser } = useContext(UserContext);
   const navigate = useNavigate();
 
+  // --- APIからデータを取得 ---
+  // useApiDataフックを使って、お祭りデータとアカウントデータを取得
+  const { data: festivals, loading: festivalsLoading, error: festivalsError } = useApiData(getFestivals);
+  const { data: accountData, loading: accountLoading, error: accountError } = useApiData(getAccountData, [user?.id]); // user.idを依存配列に追加
+  const { data: fetchedEditLogs, loading: editLogsLoading, error: editLogsError, refetch: refetchEditLogs } = useApiData(getEditLogs, [user?.id]); // 編集履歴もAPIから取得
+
+  // --- Stateの定義 ---
   const [favorites, setFavorites] = useState({});
-  const [ratings, setRatings] = useState({});
   const [diaries, setDiaries] = useState({});
-  const [editLogs, setEditLogs] = useState([]);
-  const [festivals, setFestivals] = useState([]); // お祭りデータを保持するstate
-  const [showAllLogs, setShowAllLogs] = useState(false); // UIトグルのみ
+  const [editLogs, setEditLogs] = useState([]); // 編集履歴のStateは残す
+  const [showAllLogs, setShowAllLogs] = useState(false);
 
   // Google翻訳初期化
   useEffect(() => initGoogleTranslate(), []);
 
+  // APIから取得したアカウントデータでStateを更新
   useEffect(() => {
-    // コンポーネントがマウントされたら、一度だけお祭りデータを取得する
-    // APIからお祭りデータを取得
-    const fetchFestivals = async () => {
-      try {
-        const response = await getFestivals();
-        setFestivals(response.data);
-      } catch (error) {
-        console.error("お祭りデータの読み込みに失敗しました。", error);
-      }
-    };
-    fetchFestivals();
-  }, []); // 依存配列を空にすることで、初回レンダリング時に一度だけ実行される
+    if (accountData) {
+      setFavorites(accountData.favorites || {});
+      setDiaries(accountData.diaries || {});
+    }
+  }, [accountData]);
 
-  // ユーザーデータ読み込み
+  // APIから取得した編集履歴でStateを更新
   useEffect(() => {
-    if (!user) return;
-
-    setFavorites(safeParse(`festivalFavorites_${user.username}`, {}));
-    setRatings(safeParse(`festivalRatings_${user.username}`, {}));
-    setDiaries(safeParse(`festivalDiaries_${user.username}`, {}));
-
-    // 履歴取得（初回のみ）
-    const logs = getAllEditLogs(user.username, false);
-    setEditLogs(logs);
-  }, [user]);
-
-  const saveData = (key, data) =>
-    localStorage.setItem(`${key}_${user.username}`, JSON.stringify(data));
-
-  const saveFavorites = (updated) => {
+    if (fetchedEditLogs) {
+      setEditLogs(fetchedEditLogs);
+    }
+  }, [fetchedEditLogs]);
+  
+  // --- データ保存関数 (API呼び出し) ---
+  const saveFavorites = async (updated) => {
     setFavorites(updated);
-    saveData("festivalFavorites", updated);
+    await updateFavorites(updated).catch(err => console.error("お気に入りの更新に失敗", err));
   };
 
-  const saveRatings = (updated) => {
-    setRatings(updated);
-    saveData("festivalRatings", updated);
-  };
-
-  const saveDiaries = (updated) => {
+  const saveDiaries = async (updated) => {
     setDiaries(updated);
-    saveData("festivalDiaries", updated);
+    await updateDiaries(updated).catch(err => console.error("日記の更新に失敗", err));
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
     setUser(null);
     navigate("/");
   };
 
-  // すべての写真をフラット配列で取得
-  const allPhotos = Object.values(diaries).flat(1).filter((e) => e.image);
-
   // 編集履歴追加
-  const logEditAction = (festival, content) => {
-    addEditLog(user.username, festival.id, festival.name, content); // localStorage 更新
+  const logEditAction = async (festival, content) => {
+    if (!user || !festival) return;
 
-    const newLog = {
-      festival: festival.name,
-      content,
-      date: new Date().toLocaleString(),
+    const newLogData = {
+      festival_id: festival.id,
+      festival_name: festival.name,
+      content: content,
+      date: new Date().toISOString(), // ISO形式でバックエンドに送信
     };
 
-    setEditLogs((prev) => [...prev, newLog]); // ⚠ 無限ループ回避
+    try {
+      await addEditLogToBackend(newLogData);
+      refetchEditLogs(); // 履歴を再取得してUIを更新
+    } catch (error) {
+      console.error("編集履歴の保存に失敗しました:", error);
+    }
   };
+
+  // すべての写真をフラット配列で取得
+  const allPhotos = Object.values(diaries).flat(1).filter((e) => e.image);
 
   // 写真操作: 追加
   const handleAddPhoto = (fid, file) => {
@@ -163,7 +146,15 @@ export default function AccountPage() {
     URL.revokeObjectURL(url);
   };
 
-  if (!user) return <p>ログインが必要です。</p>;
+  // ローディングとエラーの状態管理 (編集履歴のローディングも追加)
+  const isLoading = festivalsLoading || accountLoading || editLogsLoading;
+  if (isLoading) {
+    return <p>データを読み込み中...</p>;
+  }
+  if (!user || festivalsError || accountError || editLogsError) {
+    // ログインページにリダイレクトするか、エラーメッセージを表示
+    return <p style={{ color: 'red' }}>データの読み込みに失敗しました: {festivalsError?.message || accountError?.message || editLogsError?.message || '不明なエラー'}</p>;
+  }
 
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
@@ -212,23 +203,6 @@ export default function AccountPage() {
           ログアウト
         </button>
       </div>
-
-      {/* ⭐ 星の評価 */}
-      <h2>⭐ 星の評価</h2>
-      {festivals.map((f) => (
-        <div key={f.id}>
-          <strong>{f.name}</strong>
-          <StarRating
-            count={5}
-            value={ratings[f.id] || 0}
-            onRate={(r) => {
-              const updated = { ...ratings, [f.id]: r };
-              saveRatings(updated);
-              logEditAction(f, `星評価を ${r} に変更しました`);
-            }}
-          />
-        </div>
-      ))}
 
       {/* ❤️ お気に入り */}
       <h2>❤️ お気に入りのお祭り</h2>
@@ -414,7 +388,7 @@ export default function AccountPage() {
         CSV形式で出力
       </button>
 
-      {editLogs.length === 0 ? (
+      {editLogs && editLogs.length === 0 ? (
         <p>まだ編集履歴はありません。</p>
       ) : (
         <ul>
