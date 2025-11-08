@@ -28,6 +28,7 @@ apiClient.interceptors.request.use(
 
 // Festival API
 export const getFestivals = () => {
+  // baseURLが 'http://localhost:5000/api' なので、ここでは '/festivals' を指定します。
   return apiClient.get('/festivals');
 };
 
@@ -35,19 +36,6 @@ export const createFestival = (festival) => {
   // バックエンドが必要とするフィールドのみを抽出して送信する
   const { name, date, location } = festival;
   return apiClient.post('/festivals', { name, date, location });
-};
-
-// Account API
-export const getAccountData = () => {
-  return apiClient.get('/account/data');
-};
-
-export const updateFavorites = (favorites) => {
-  return apiClient.post('/account/favorites', { favorites });
-};
-
-export const updateDiaries = (diaries) => {
-  return apiClient.post('/account/diaries', { diaries });
 };
 
 // Auth API
@@ -65,4 +53,17 @@ export const getEditLogs = () => {
 };
 export const addEditLogToBackend = (logData) => {
   return apiClient.post('/editlogs', logData);
+};
+
+// Account API
+export const getAccountData = () => {
+  return apiClient.get('/account/data');
+};
+
+export const updateFavorites = (favorites) => {
+  return apiClient.post('/account/favorites', { favorites });
+};
+
+export const updateDiaries = (diaries) => {
+  return apiClient.post('/account/diaries', { diaries });
 };

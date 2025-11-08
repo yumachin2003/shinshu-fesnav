@@ -1,92 +1,70 @@
 // src/FestivalPage.js
 import React, { useState, useEffect, useContext } from "react";
-import StarRating from "./StarRating";
-import Favorite from "./Favorite";
-import { UserContext } from "./App";
-import { getFestivals } from "./utils/apiService"; // APIサービスをインポート
-import { initGoogleTranslate } from "./utils/translate";
-import { addEditLog } from "./utils/editLog";
+import Favorite from "../utils/Favorite";
+import { UserContext } from "../App";
+import { getFestivals, getAccountData, updateFavorites, updateDiaries, addEditLogToBackend } from "../utils/apiService";
+import useApiData from '../hooks/useApiData';
+import { initGoogleTranslate } from "../utils/translate";
 
-// localStorageから安全にデータを取得する
-const safeParse = (key, fallback = {}) => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-export default function FestivalPage() {
+export default function Festival() {
   const { user } = useContext(UserContext);
-  const username = user?.username || null;
 
-  const [festivals, setFestivals] = useState([]); // APIから取得したお祭りデータ
-  const [isLoading, setIsLoading] = useState(true); // ローディング状態
-  const [error, setError] = useState(null); // エラー状態
-  // 翻訳機能の初期化
-  useEffect(() => {
-    initGoogleTranslate();
-  }, []);
+  // --- APIからデータを取得 ---
+  const { data: festivals, loading: festivalsLoading, error: festivalsError } = useApiData(getFestivals);
+  const { data: accountData, loading: accountLoading, error: accountError, refetch: refetchAccountData } = useApiData(getAccountData, [user?.id]);
 
-  const [ratings, setRatings] = useState({});
+  // --- Stateの定義 ---
   const [favorites, setFavorites] = useState({});
   const [diaries, setDiaries] = useState({});
   const [newDiary, setNewDiary] = useState({});
   const [newImage, setNewImage] = useState({});
   const [editing, setEditing] = useState({});
 
-  // APIからお祭りデータを取得する
+  // --- useEffectフック ---
   useEffect(() => {
-    // ログイン状態に関わらず、コンポーネントがマウントされたら一度だけお祭りデータを取得
-    const fetchFestivals = async () => {
-      try {
-        const response = await getFestivals();
-        setFestivals(response.data);
-      } catch (err) {
-        console.error("データ取得エラー:", err);
-        setError("お祭り情報を読み込めませんでした。");
-      } finally {
-        setIsLoading(false);
-      }
+    initGoogleTranslate();
+  }, []);
+
+  // APIから取得したアカウントデータでStateを更新
+  useEffect(() => {
+    if (accountData) {
+      setFavorites(accountData.favorites || {});
+      setDiaries(accountData.diaries || {});
+    }
+  }, [accountData]);
+
+  // --- データ保存関数 (API呼び出し) ---
+  const saveFavorites = async (updated) => {
+    setFavorites(updated);
+    await updateFavorites(updated).catch(err => console.error("お気に入りの更新に失敗", err));
+  };
+
+  const saveDiaries = async (updated) => {
+    setDiaries(updated);
+    await updateDiaries(updated).catch(err => console.error("日記の更新に失敗", err));
+  };
+
+  // 編集履歴追加
+  const logEditAction = async (festival, content) => {
+    if (!user || !festival) return;
+
+    const newLogData = {
+      festival_id: festival.id,
+      festival_name: festival.name,
+      content: content,
+      date: new Date().toISOString(),
     };
 
-    fetchFestivals();
-  }, []); // 依存配列を空にして、初回レンダリング時のみ実行
-
-  // ユーザーごとのデータをロード
-  useEffect(() => {
-    if (!username) return;
-    setRatings(safeParse(`festivalRatings_${username}`, {}));
-    setFavorites(safeParse(`festivalFavorites_${username}`, {}));
-    setDiaries(safeParse(`festivalDiaries_${username}`, {}));
-  }, [username]);
-
-  const saveData = (key, data) => {
     try {
-      localStorage.setItem(`${key}_${username}`, JSON.stringify(data));
+      await addEditLogToBackend(newLogData);
+      // Accountページにいるわけではないので、ここでは再取得は不要
     } catch (error) {
-      alert("保存できません：容量制限を超えています。不要な日記を削除してください。");
+      console.error("編集履歴の保存に失敗しました:", error);
     }
   };
 
-  const saveFavorites = (updated) => {
-    setFavorites(updated);
-    saveData("festivalFavorites", updated);
-  };
-
-  const saveRatings = (updated) => {
-    setRatings(updated);
-    saveData("festivalRatings", updated);
-  };
-
-  const saveDiaries = (updated) => {
-    setDiaries(updated);
-    saveData("festivalDiaries", updated);
-  };
-
   // 日記保存（新規・編集共通）
-  const handleSaveDiary = (id) => {
+  const handleSaveDiary = async (id) => {
     const text = newDiary[id]?.trim();
     if (!text && !newImage[id]) return;
 
@@ -100,8 +78,8 @@ export default function FestivalPage() {
           ? { ...d, text, image: newImage[id] ?? d.image, date: now }
           : d
       );
-      const festivalName = festivals.find(f => f.id === id)?.name;
-      addEditLog(username, id, festivalName, `日記を編集しました: ${text}`);
+      const festival = festivals.find(f => f.id === id);
+      logEditAction(festival, `日記を編集しました: ${text}`);
       setEditing((prev) => ({ ...prev, [id]: null }));
     } else {
       const newEntry = {
@@ -111,11 +89,11 @@ export default function FestivalPage() {
         date: now,
       };
       updated[id] = [...(updated[id] || []), newEntry];
-      const festivalName = festivals.find(f => f.id === id)?.name;
-      addEditLog(username, id, festivalName, `新しい日記を投稿しました: ${text}`);
+      const festival = festivals.find(f => f.id === id);
+      logEditAction(festival, `新しい日記を投稿しました: ${text}`);
     }
 
-    saveDiaries(updated);
+    await saveDiaries(updated);
     setNewDiary((prev) => ({ ...prev, [id]: "" }));
     setNewImage((prev) => ({ ...prev, [id]: null }));
   };
@@ -128,8 +106,8 @@ export default function FestivalPage() {
       [id]: diaries[id].filter((entry) => entry.timestamp !== timestamp),
     };
     saveDiaries(updated);
-    const festivalName = festivals.find(f => f.id === id)?.name;
-    addEditLog(username, id, festivalName, "日記を削除しました。");
+    const festival = festivals.find(f => f.id === id);
+    logEditAction(festival, "日記を削除しました。");
   };
 
   // 日記編集開始
@@ -158,29 +136,31 @@ export default function FestivalPage() {
     reader.readAsDataURL(file);
   };
 
-  if (!username)
+  const isLoading = festivalsLoading || (user && accountLoading);
+  const error = festivalsError || (user && accountError);
+
+  if (!user) {
     return (
       <div style={{ padding: "2rem" }}>
         <h2>ログインが必要です。</h2>
         <a href="/">ログインページへ</a>
       </div>
     );
+  }
 
-  // ローディング中の表示
   if (isLoading) {
     return <div style={{ padding: "2rem" }}>読み込み中...</div>;
   }
 
-  // エラー発生時の表示
-  if (error) {
-    return <div style={{ padding: "2rem", color: 'red' }}>🚨 {error}</div>;
+  if (error) { // errorオブジェクトを直接描画しないように修正
+    return <div style={{ padding: "2rem", color: 'red' }}>🚨 {error.message || 'データの読み込み中にエラーが発生しました。'}</div>;
   }
 
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       {/* 翻訳ウィジェット */}
       <div id="google_translate_element" style={{ position: "fixed", bottom: 10, left: 10, zIndex: 9999 }}></div>
-
+      
       <h1>長野県のお祭り</h1>
 
       {festivals.map((f) => (
@@ -202,16 +182,6 @@ export default function FestivalPage() {
             onToggle={() => {
               const updated = { ...favorites, [f.id]: !favorites[f.id] };
               saveFavorites(updated);
-            }}
-          />
-
-          {/* 評価 */}
-          <StarRating
-            count={5}
-            value={ratings[f.id] || 0}
-            onRate={(r) => {
-              const updated = { ...ratings, [f.id]: r };
-              saveRatings(updated);
             }}
           />
 

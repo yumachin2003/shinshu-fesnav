@@ -1,10 +1,10 @@
 import React, { useState, useContext, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { UserContext } from "./App";
-import { loginUser } from "./utils/apiService"; // 修正
-import { initGoogleTranslate } from "./utils/translate"; // ✅ 翻訳機能を追加
+import { UserContext } from "../App";
+import { loginUser } from "../utils/apiService";
+import { initGoogleTranslate } from "../utils/translate";
 
-export default function LoginPage() {
+export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();

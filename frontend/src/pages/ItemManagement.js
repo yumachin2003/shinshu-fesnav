@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 // API通信ロジックを分離したモジュールをインポート
-import { getFestivals, createFestival } from './utils/apiService';
+import { getFestivals, createFestival } from '../utils/apiService';
+import useApiData from '../hooks/useApiData';
 
 const INITIAL_STATE = {
   name: '',
@@ -8,30 +9,11 @@ const INITIAL_STATE = {
   location: '',
 };
 
-function ItemManagementPage() {
-  const [festivals, setFestivals] = useState([]);
+function ItemManagement() {
+  // useApiDataフックを使ってお祭りデータを取得
+  const { data: festivals, loading, error, refetch } = useApiData(getFestivals);
   const [newFestival, setNewFestival] = useState(INITIAL_STATE);
-  // ローディング状態とエラー状態を管理するstateを追加
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetchFestivals();
-  }, []);
-
-  const fetchFestivals = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await getFestivals();
-      setFestivals(response.data);
-    } catch (error) {
-      console.error("Error fetching festivals:", error);
-      setError("お祭りデータの読み込みに失敗しました。");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [submitError, setSubmitError] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -47,11 +29,10 @@ function ItemManagementPage() {
     try {
       await createFestival(newFestival);
       setNewFestival(INITIAL_STATE); // フォームをリセット
-      // 成功したらリストを再読み込み
-      fetchFestivals();
+      refetch(); // データを再取得
     } catch (error) {
       console.error("Error adding festival:", error);
-      setError("お祭りの追加に失敗しました。");
+      setSubmitError("お祭りの追加に失敗しました。");
     }
   };
 
@@ -91,12 +72,14 @@ function ItemManagementPage() {
         </form>
 
         <h2>登録済みのお祭り</h2>
-        {/* エラーメッセージの表示 */}
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+        {/* フォーム送信時のエラーメッセージ */}
+        {submitError && <p style={{ color: 'red' }}>{submitError}</p>}
+        {/* データ取得時のエラーメッセージ */}
+        {error && <p style={{ color: 'red' }}>お祭りデータの読み込みに失敗しました。</p>}
         {/* ローディング表示 */}
         {loading ? (
           <p>読み込み中...</p>
-        ) : (
+        ) : festivals && (
           <table>
             <thead>
               <tr><th>名前</th><th>開催日</th><th>場所</th></tr>
@@ -117,4 +100,4 @@ function ItemManagementPage() {
   );
 }
 
-export default ItemManagementPage;
+export default ItemManagement;
