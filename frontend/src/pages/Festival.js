@@ -5,6 +5,8 @@ import { UserContext } from "../App";
 import { getFestivals, getAccountData, updateFavorites, updateDiaries, addEditLogToBackend } from "../utils/apiService";
 import useApiData from '../hooks/useApiData';
 import { initGoogleTranslate } from "../utils/translate";
+import FestivalCalendar from '../utils/FestivalCalendar'; // 新しいコンポーネントをインポート
+import FestivalMap from '../utils/FestivalMap'; // 新しいコンポーネントをインポート
 
 export default function Festival() {
   const { user } = useContext(UserContext);
@@ -19,6 +21,7 @@ export default function Festival() {
   const [newDiary, setNewDiary] = useState({});
   const [newImage, setNewImage] = useState({});
   const [editing, setEditing] = useState({});
+  const [viewMode, setViewMode] = useState('list'); // 'list', 'calendar', 'map'
 
   // --- useEffectフック ---
   useEffect(() => {
@@ -156,6 +159,130 @@ export default function Festival() {
     return <div style={{ padding: "2rem", color: 'red' }}>🚨 {error.message || 'データの読み込み中にエラーが発生しました。'}</div>;
   }
 
+  // 表示するコンテンツをviewModeに応じて切り替える
+  const renderContent = () => {
+    if (!festivals) return null;
+
+    switch (viewMode) {
+      case 'calendar':
+        return <FestivalCalendar festivals={festivals} />;
+      case 'map':
+        return <FestivalMap festivals={festivals} />;
+      case 'list':
+      default:
+        return festivals.map((f) => (
+          <div
+            key={f.id}
+            style={{
+              marginBottom: "2rem",
+              padding: "1rem",
+              border: "1px solid #ccc",
+              borderRadius: "8px",
+              maxWidth: "600px",
+            }}
+          >
+            <h2>{f.name}</h2>
+
+            {/* お気に入り */}
+            <Favorite
+              selected={favorites[f.id]}
+              onToggle={() => {
+                const updated = { ...favorites, [f.id]: !favorites[f.id] };
+                saveFavorites(updated);
+              }}
+            />
+
+            {/* 日記入力欄 */}
+            <div style={{ marginTop: "1rem" }}>
+              <textarea
+                placeholder="今日の日記を書こう！"
+                value={newDiary[f.id] || ""}
+                onChange={(e) =>
+                  setNewDiary((prev) => ({ ...prev, [f.id]: e.target.value }))
+                }
+                style={{ width: "100%", height: "80px", padding: "0.5rem" }}
+              />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleImageUpload(e, f.id)}
+                style={{ marginTop: "0.5rem" }}
+              />
+              {newImage[f.id] && (
+                <img
+                  src={newImage[f.id]}
+                  alt="プレビュー"
+                  style={{ width: "100%", marginTop: "0.5rem", borderRadius: "8px" }}
+                />
+              )}
+              <div style={{ marginTop: "0.5rem" }}>
+                <button
+                  onClick={() => handleSaveDiary(f.id)}
+                  style={{
+                    backgroundColor: editing[f.id] ? "#4caf50" : "#ffb74d",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "5px",
+                    padding: "0.4rem 0.8rem",
+                    cursor: "pointer",
+                    marginRight: "0.5rem",
+                  }}
+                >
+                  {editing[f.id] ? "更新する" : "日記を保存"}
+                </button>
+                {editing[f.id] && (
+                  <button
+                    onClick={() => handleCancelEdit(f.id)}
+                    style={{
+                      backgroundColor: "#9e9e9e",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "5px",
+                      padding: "0.4rem 0.8rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                    キャンセル
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 日記一覧 */}
+            {diaries[f.id] && diaries[f.id].length > 0 && (
+              <div style={{ marginTop: "1rem" }}>
+                <h3>📔 自分の日記一覧</h3>
+                {diaries[f.id].map((entry) => (
+                  <div
+                    key={entry.timestamp}
+                    style={{
+                      borderTop: "1px solid #ddd",
+                      paddingTop: "0.5rem",
+                      marginTop: "0.5rem",
+                    }}
+                  >
+                    <p style={{ fontSize: "0.9rem", color: "#555" }}>{entry.date}</p>
+                    {entry.image && (
+                      <img
+                        src={entry.image}
+                        alt="投稿写真"
+                        style={{ width: "100%", maxWidth: "400px", borderRadius: "8px", marginBottom: "0.5rem" }}
+                      />
+                    )}
+                    <p>{entry.text}</p>
+                    <div style={{ marginTop: "0.5rem" }}>
+                      <button onClick={() => handleEditDiary(f.id, entry)} style={{ marginRight: "0.5rem", backgroundColor: "#64b5f6", color: "white", border: "none", borderRadius: "4px", padding: "3px 8px", cursor: "pointer" }}>編集</button>
+                      <button onClick={() => handleDeleteDiary(f.id, entry.timestamp)} style={{ backgroundColor: "#ef5350", color: "white", border: "none", borderRadius: "4px", padding: "3px 8px", cursor: "pointer" }}>削除</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ));
+    }
+  };
+
   return (
     <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
       {/* 翻訳ウィジェット */}
@@ -163,141 +290,15 @@ export default function Festival() {
       
       <h1>長野県のお祭り</h1>
 
-      {festivals.map((f) => (
-        <div
-          key={f.id}
-          style={{
-            marginBottom: "2rem",
-            padding: "1rem",
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-            maxWidth: "600px",
-          }}
-        >
-          <h2>{f.name}</h2>
+      {/* 表示モード切り替えボタン */}
+      <div style={{ marginBottom: '1rem' }}>
+        <button onClick={() => setViewMode('list')} disabled={viewMode === 'list'}>リスト</button>
+        <button onClick={() => setViewMode('calendar')} disabled={viewMode === 'calendar'}>カレンダー</button>
+        <button onClick={() => setViewMode('map')} disabled={viewMode === 'map'}>地図</button>
+      </div>
 
-          {/* お気に入り */}
-          <Favorite
-            selected={favorites[f.id]}
-            onToggle={() => {
-              const updated = { ...favorites, [f.id]: !favorites[f.id] };
-              saveFavorites(updated);
-            }}
-          />
-
-          {/* 日記入力欄 */}
-          <div style={{ marginTop: "1rem" }}>
-            <textarea
-              placeholder="今日の日記を書こう！"
-              value={newDiary[f.id] || ""}
-              onChange={(e) =>
-                setNewDiary((prev) => ({ ...prev, [f.id]: e.target.value }))
-              }
-              style={{ width: "100%", height: "80px", padding: "0.5rem" }}
-            />
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleImageUpload(e, f.id)}
-              style={{ marginTop: "0.5rem" }}
-            />
-            {newImage[f.id] && (
-              <img
-                src={newImage[f.id]}
-                alt="プレビュー"
-                style={{ width: "100%", marginTop: "0.5rem", borderRadius: "8px" }}
-              />
-            )}
-            <div style={{ marginTop: "0.5rem" }}>
-              <button
-                onClick={() => handleSaveDiary(f.id)}
-                style={{
-                  backgroundColor: editing[f.id] ? "#4caf50" : "#ffb74d",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "5px",
-                  padding: "0.4rem 0.8rem",
-                  cursor: "pointer",
-                  marginRight: "0.5rem",
-                }}
-              >
-                {editing[f.id] ? "更新する" : "日記を保存"}
-              </button>
-              {editing[f.id] && (
-                <button
-                  onClick={() => handleCancelEdit(f.id)}
-                  style={{
-                    backgroundColor: "#9e9e9e",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "5px",
-                    padding: "0.4rem 0.8rem",
-                    cursor: "pointer",
-                  }}
-                >
-                  キャンセル
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* 日記一覧 */}
-          {diaries[f.id] && diaries[f.id].length > 0 && (
-            <div style={{ marginTop: "1rem" }}>
-              <h3>📔 自分の日記一覧</h3>
-              {diaries[f.id].map((entry) => (
-                <div
-                  key={entry.timestamp}
-                  style={{
-                    borderTop: "1px solid #ddd",
-                    paddingTop: "0.5rem",
-                    marginTop: "0.5rem",
-                  }}
-                >
-                  <p style={{ fontSize: "0.9rem", color: "#555" }}>{entry.date}</p>
-                  {entry.image && (
-                    <img
-                      src={entry.image}
-                      alt="投稿写真"
-                      style={{ width: "100%", maxWidth: "400px", borderRadius: "8px", marginBottom: "0.5rem" }}
-                    />
-                  )}
-                  <p>{entry.text}</p>
-                  <div style={{ marginTop: "0.5rem" }}>
-                    <button
-                      onClick={() => handleEditDiary(f.id, entry)}
-                      style={{
-                        marginRight: "0.5rem",
-                        backgroundColor: "#64b5f6",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        padding: "3px 8px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      編集
-                    </button>
-                    <button
-                      onClick={() => handleDeleteDiary(f.id, entry.timestamp)}
-                      style={{
-                        backgroundColor: "#ef5350",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "4px",
-                        padding: "3px 8px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      削除
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
+      {/* コンテンツの描画 */}
+      {renderContent()}
     </div>
   );
 }
