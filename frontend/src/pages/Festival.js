@@ -5,8 +5,8 @@ import { UserContext } from "../App";
 import { getFestivals, getAccountData, updateFavorites, updateDiaries, addEditLogToBackend } from "../utils/apiService";
 import useApiData from '../hooks/useApiData';
 import { initGoogleTranslate } from "../utils/translate";
-import FestivalCalendar from '../utils/FestivalCalendar'; // 新しいコンポーネントをインポート
-import FestivalMap from '../utils/FestivalMap'; // 新しいコンポーネントをインポート
+import FestivalCalendar from '../components/FestivalCalendar'; // パスを修正
+import FestivalMap from '../components/FestivalMap'; // パスを修正
 
 export default function Festival() {
   const { user } = useContext(UserContext);
