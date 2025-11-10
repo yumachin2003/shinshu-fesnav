@@ -7,6 +7,8 @@ import useApiData from '../hooks/useApiData';
 import { initGoogleTranslate } from "../utils/translate";
 import FestivalCalendar from '../components/FestivalCalendar'; // パスを修正
 import FestivalMap from '../components/FestivalMap'; // パスを修正
+import AddToGoogleCalendarButton from "../components/AddToGoogleCalendarButton";
+import AddToICalendarButton from "../components/AddToICalendarButton";
 
 export default function Festival() {
   const { user } = useContext(UserContext);
@@ -182,6 +184,9 @@ export default function Festival() {
             }}
           >
             <h2>{f.name}</h2>
+            <AddToGoogleCalendarButton name={f.name} location={f.location} date={f.date} />
+            <AddToICalendarButton name={f.name} location={f.location} date={f.date} />
+
 
             {/* お気に入り */}
             <Favorite

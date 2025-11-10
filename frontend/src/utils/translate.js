@@ -1,29 +1,29 @@
+// utils/translate.js
 export function initGoogleTranslate() {
-  // すでに初期化済みなら何もしない
   if (window.googleTranslateInitialized) return;
   window.googleTranslateInitialized = true;
 
-  // 翻訳スクリプトがまだ読み込まれていなければ読み込む
-  if (!document.getElementById("google-translate-script")) {
-    const script = document.createElement("script");
-    script.id = "google-translate-script";
-    script.src =
-      "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-  }
+  if (document.getElementById("google-translate-script")) return;
+  if (document.querySelector(".goog-te-gadget")) return;
 
-  // Google Translate 初期化関数（グローバルで必要）
+  const script = document.createElement("script");
+  script.id = "google-translate-script";
+  script.src =
+    "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+  script.async = true;
+  script.defer = true;
+  document.body.appendChild(script);
+
   window.googleTranslateElementInit = () => {
-    const container = document.getElementById("google_translate_element");
-    if (!container) return;
+    if (document.querySelector(".goog-te-gadget")) return;
 
-    // 初期化済みなら何もしない
-    if (container.getAttribute("data-initialized")) return;
-    container.setAttribute("data-initialized", "true");
+    let container = document.getElementById("google_translate_element");
+    if (!container) {
+      container = document.createElement("div");
+      container.id = "google_translate_element";
+      document.body.appendChild(container);
+    }
 
-    // 翻訳ウィジェットの作成
     new window.google.translate.TranslateElement(
       {
         pageLanguage: "ja",
@@ -33,18 +33,22 @@ export function initGoogleTranslate() {
       "google_translate_element"
     );
 
-    // ウィジェット周りのスタイル調整
     const style = document.createElement("style");
     style.textContent = `
+      /* 🧹 Google翻訳ウィジェット周りの最小限の非表示設定 */
       .goog-te-banner-frame.skiptranslate,
-      .goog-te-gadget-icon,
-      .goog-logo-link,
       .goog-te-balloon-frame,
       #goog-gt-tt,
       .goog-te-spinner-pos {
         display: none !important;
       }
+
+      /* ✅ 「Powered by Google 翻訳」は非表示にしない */
+      /* .goog-logo-link,
+         .goog-te-gadget span { display: none !important; } */
+
       body { top: 0 !important; }
+
       #google_translate_element {
         position: fixed !important;
         bottom: 10px !important;
@@ -55,7 +59,12 @@ export function initGoogleTranslate() {
         padding: 4px !important;
         box-shadow: 0 0 6px rgba(0,0,0,0.1) !important;
       }
-      .goog-te-gadget { font-size: 12px !important; color: #333 !important; }
+
+      .goog-te-gadget {
+        font-size: 12px !important;
+        color: #333 !important;
+      }
+
       .goog-te-gadget .goog-te-combo {
         background: white !important;
         border-radius: 6px !important;
