@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, current_app, g
 from .models import Festivals, User, UserFavorite, UserDiary, EditLog
 from datetime import datetime, timedelta
 from . import db
-import jwt
+import jwt as pyjwt
 import datetime
 from functools import wraps
 
@@ -26,12 +26,12 @@ def token_required(f):
 
         try:
             # トークンをデコードしてユーザー情報を取得
-            data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+            data = pyjwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             current_user = User.query.filter_by(id=data['user_id']).first()
             g.current_user = current_user # リクエストコンテキストにユーザー情報を保存
-        except jwt.ExpiredSignatureError:
+        except pyjwt.ExpiredSignatureError:
             return jsonify({'message': 'トークンの有効期限が切れています。再ログインしてください。'}), 401
-        except jwt.InvalidTokenError:
+        except pyjwt.InvalidTokenError:
             return jsonify({'message': '無効なトークンです。'}), 401
 
         return f(*args, **kwargs)
@@ -123,7 +123,7 @@ def login():
     # ユーザーが存在し、かつパスワードが一致するかチェック
     if user and user.check_password(password):
         # JWTトークンを生成
-        token = jwt.encode({
+        token = pyjwt.encode({
             'user_id': user.id,
             'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24) # トークンの有効期限は24時間
         }, current_app.config['SECRET_KEY'], algorithm="HS256")
