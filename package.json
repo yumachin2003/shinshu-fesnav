@@ -1,0 +1,13 @@
+{
+  "name": "shinshu-fesnav-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start-backend": "cd backend && ./.venv/bin/python3.11 run.py runserver 0.0.0.0:5000",
+    "start-react": "cd frontend && npm start",
+    "dev": "concurrently \"npm:start-backend\" \"npm:start-react\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -3,3 +3,4 @@ frontend/package-lock.json
 .DS_Store
 start.sh
 Dockerfile
+node_modules
