@@ -15,7 +15,7 @@ export default function Festival() {
 
   // --- APIからデータを取得 ---
   const { data: festivals, loading: festivalsLoading, error: festivalsError } = useApiData(getFestivals);
-  const { data: accountData, loading: accountLoading, error: accountError, refetch: refetchAccountData } = useApiData(getAccountData, [user?.id]);
+  const { data: accountData, loading: accountLoading, error: accountError } = useApiData(getAccountData, [user?.id]);
 
   // --- Stateの定義 ---
   const [favorites, setFavorites] = useState({});
