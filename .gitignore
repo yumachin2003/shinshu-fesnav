@@ -5,3 +5,4 @@ start.sh
 Dockerfile
 node_modules
 SFstart
+docker-compose.yml
