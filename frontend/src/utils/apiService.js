@@ -2,8 +2,7 @@ import axios from 'axios';
 
 // axiosのインスタンスを作成
 const apiClient = axios.create({
-  // バックエンドサーバーのIPアドレスを直接指定します。
-  baseURL: 'http://127.0.0.1:5000/api',
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
   },
