@@ -143,16 +143,7 @@ export default function Festival() {
 
   const isLoading = festivalsLoading || (user && accountLoading);
   const error = festivalsError || (user && accountError);
-
-  if (!user) {
-    return (
-      <div style={{ padding: "2rem" }}>
-        <h2>ログインが必要です。</h2>
-        <a href="/">ログインページへ</a>
-      </div>
-    );
-  }
-
+  
   if (isLoading) {
     return <div style={{ padding: "2rem" }}>読み込み中...</div>;
   }
