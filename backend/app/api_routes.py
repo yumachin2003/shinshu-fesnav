@@ -48,7 +48,6 @@ def test_connection():
 
 # GET /api/festivals : 全てのお祭りを取得
 @api_bp.route('/festivals', methods=['GET'])
-@token_required # 認証デコレータを適用
 def get_festivals():
     festivals = Festivals.query.all()
     return jsonify([festival.to_dict() for festival in festivals])

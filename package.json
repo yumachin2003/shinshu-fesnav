@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "start-backend": "cd backend && ./.venv/bin/python3.11 run.py runserver 0.0.0.0:5000",
+    "start-backend": "cd backend && pipenv run python run.py runserver 0.0.0.0:5000",
     "start-react": "cd frontend && npm start",
     "dev": "concurrently \"npm:start-backend\" \"npm:start-react\""
   },
