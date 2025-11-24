@@ -54,26 +54,26 @@ def get_festivals():
 
 # POST /api/festivals : 新しいお祭りを追加
 @api_bp.route('/festivals', methods=['POST'])
-@token_required # 認証デコレータを適用
+@token_required
 def add_festival():
+    # --- root 以外は 403 Forbidden ---
+    if g.current_user.username != "root":
+        return jsonify({'error': '権限がありません（root のみ追加可能）'}), 403
+
     data = request.get_json()
 
-    # 必須項目のチェック
     if not data or not data.get('name') or not data.get('date') or not data.get('location'):
         return jsonify({'error': 'Name, date, and location are required'}), 400
 
-    # 同じ名前と日付のお祭りが既に存在するかチェック
     existing_festival = Festivals.query.filter_by(name=data['name'], date=data['date']).first()
     if existing_festival:
-        return jsonify({'error': '同じ名前と日付のお祭りが既に存在します。'}), 409 # 409 Conflict
+        return jsonify({'error': '同じ名前と日付のお祭りが既に存在します。'}), 409
 
     try:
-        # 日付文字列の形式を検証
         fes_date = datetime.datetime.strptime(data['date'], '%Y-%m-%d').date()
     except ValueError:
         return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
 
-    # 文字列をdateオブジェクトに変換してから渡す
     new_festival = Festivals(name=data['name'], date=fes_date, location=data['location'])
     db.session.add(new_festival)
     db.session.commit()
