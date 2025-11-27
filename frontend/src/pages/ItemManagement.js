@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-// API通信ロジックを分離したモジュールをインポート
 import { getFestivals, createFestival } from '../utils/apiService';
 import useApiData from '../hooks/useApiData';
 
@@ -10,10 +9,23 @@ const INITIAL_STATE = {
 };
 
 function ItemManagement() {
-  // useApiDataフックを使ってお祭りデータを取得
+  // 🔹 常に Hooks を最初に呼ぶ（ルール）
   const { data: festivals, loading, error, refetch } = useApiData(getFestivals);
   const [newFestival, setNewFestival] = useState(INITIAL_STATE);
   const [submitError, setSubmitError] = useState(null);
+
+  // 🔹 ユーザー情報チェック（Hooks のあとで実行）
+  const storedUser = JSON.parse(localStorage.getItem("user"));
+  const isRoot = storedUser && storedUser.username === "root";
+
+  // 🔹 root 以外は閲覧不可
+  if (!isRoot) {
+    return (
+      <div style={{ padding: "20px", fontSize: "18px", color: "red" }}>
+        閲覧権限がありません
+      </div>
+    );
+  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -22,17 +34,25 @@ function ItemManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (!newFestival.name.trim() || !newFestival.date.trim() || !newFestival.location.trim()) {
       alert('すべての項目を入力してください。');
       return;
     }
+
     try {
       await createFestival(newFestival);
       setNewFestival(INITIAL_STATE); // フォームをリセット
-      refetch(); // データを再取得
+      setSubmitError(null);          // エラーリセット
+      refetch();                     // 再取得
     } catch (error) {
       console.error("Error adding festival:", error);
-      setSubmitError("お祭りの追加に失敗しました。");
+
+      if (error.response && error.response.status === 403) {
+        setSubmitError("権限がありません");
+      } else {
+        setSubmitError("お祭りの追加に失敗しました。");
+      }
     }
   };
 
@@ -64,7 +84,7 @@ function ItemManagement() {
             value={newFestival.location}
             onChange={handleInputChange}
             placeholder="開催場所"
-            disabled={loading} // ローディング中は入力を無効化
+            disabled={loading}
           />
           <button type="submit" disabled={loading}>
             {loading ? '処理中...' : 'お祭りを追加'}
@@ -72,17 +92,20 @@ function ItemManagement() {
         </form>
 
         <h2>登録済みのお祭り</h2>
-        {/* フォーム送信時のエラーメッセージ */}
+
         {submitError && <p style={{ color: 'red' }}>{submitError}</p>}
-        {/* データ取得時のエラーメッセージ */}
         {error && <p style={{ color: 'red' }}>お祭りデータの読み込みに失敗しました。</p>}
-        {/* ローディング表示 */}
+
         {loading ? (
           <p>読み込み中...</p>
         ) : festivals && (
           <table>
             <thead>
-              <tr><th>名前</th><th>開催日</th><th>場所</th></tr>
+              <tr>
+                <th>名前</th>
+                <th>開催日</th>
+                <th>場所</th>
+              </tr>
             </thead>
             <tbody>
               {festivals.map((festival) => (
