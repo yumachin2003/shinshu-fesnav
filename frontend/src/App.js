@@ -6,6 +6,14 @@ import Register from "./pages/Register";
 import Festival from "./pages/Festival";
 import Account from "./pages/Account";
 import ItemManagement from "./pages/ItemManagement";
+import { getAccountData } from "./utils/apiService";
+import axios from "axios";
+
+// axiosの設定
+axios.defaults.baseURL = "http://localhost:5000";
+
+axios.defaults.headers.common["Authorization"] =
+  `Bearer ${localStorage.getItem("Token")}`;
 
 // ユーザー情報共有のためのContext作成
 export const UserContext = React.createContext();
@@ -24,13 +32,18 @@ export default function App() {
   // ユーザー情報の状態管理。初期値はlocalStorageから読み込み
   const [user, setUser] = useState(() => safeParse("user"));
 
-  // アプリケーション起動時に一度だけ実行
   useEffect(() => {
-    // localStorageから認証トークンを確認
-    const token = localStorage.getItem('authToken');
-    // トークンがない（＝未ログイン）場合は、ユーザー情報をクリア
-    if (!token) setUser(null);
-  }, []);
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      setUser(null);  // ← 未ログイン状態にする
+      return;
+    }
+
+    getAccountData()
+      .then(res => setUser(res.data))
+      .catch(() => setUser(null));  // token が無効ならログアウト扱い
+    }, []);
 
   return (
     // UserContext.Providerで、userとsetUserを子コンポーネントに提供
@@ -48,7 +61,8 @@ export default function App() {
           </header>
           {/* ルーティング設定 */}
           <Routes>
-            <Route path="/" element={<Login />} />
+            <Route path="/" element={<Festival />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/festivals" element={<Festival />} />
             <Route path="/items" element={<ItemManagement />} /> {/* 新しいページのルートを追加 */}

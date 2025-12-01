@@ -9,13 +9,32 @@ import FestivalCalendar from '../components/FestivalCalendar'; // パスを修�
 import FestivalMap from '../components/FestivalMap'; // パスを修正
 import AddToGoogleCalendarButton from "../components/AddToGoogleCalendarButton";
 import AddToICalendarButton from "../components/AddToICalendarButton";
+import { useNavigate } from "react-router-dom";
 
 export default function Festival() {
+  const navigate = useNavigate();  // ← ★ここに追加！
+
   const { user } = useContext(UserContext);
+
 
   // --- APIからデータを取得 ---
   const { data: festivals, loading: festivalsLoading, error: festivalsError } = useApiData(getFestivals);
-  const { data: accountData, loading: accountLoading, error: accountError } = useApiData(getAccountData, [user?.id]);
+  const { data: accountData, loading: accountLoading, error: accountError } =
+  useApiData(
+    user ? getAccountData : async () => ({ data: null }), // ← 未ログインではAPIを呼ばない
+    [user?.id]
+  );
+
+  // 未ログインチェック機能
+  const requireLogin = () => {
+  if (!user) {
+    alert("この機能を使うにはログインしてください");
+    navigate("/login");
+    return false;
+  }
+  return true;
+};
+
 
   // --- Stateの定義 ---
   const [favorites, setFavorites] = useState({});
@@ -181,11 +200,16 @@ export default function Festival() {
 
             {/* お気に入り */}
             <Favorite
-              selected={favorites[f.id]}
-              onToggle={() => {
-                const updated = { ...favorites, [f.id]: !favorites[f.id] };
-                saveFavorites(updated);
-              }}
+            selected={favorites[f.id]}
+            onToggle={() => {
+              if (!user) {
+                alert("この機能を使うにはログインしてください");
+                navigate("/login");
+                return;
+              }
+              const updated = { ...favorites, [f.id]: !favorites[f.id] };
+              saveFavorites(updated);
+            }}
             />
 
             {/* 日記入力欄 */}
@@ -213,7 +237,10 @@ export default function Festival() {
               )}
               <div style={{ marginTop: "0.5rem" }}>
                 <button
-                  onClick={() => handleSaveDiary(f.id)}
+                  onClick={() => {
+                    if (!requireLogin()) return; 
+                    handleSaveDiary(f.id);
+                  }}
                   style={{
                     backgroundColor: editing[f.id] ? "#4caf50" : "#ffb74d",
                     color: "white",
@@ -226,6 +253,7 @@ export default function Festival() {
                 >
                   {editing[f.id] ? "更新する" : "日記を保存"}
                 </button>
+
                 {editing[f.id] && (
                   <button
                     onClick={() => handleCancelEdit(f.id)}
@@ -256,8 +284,8 @@ export default function Festival() {
                       paddingTop: "0.5rem",
                       marginTop: "0.5rem",
                     }}
-                  >
-                    <p style={{ fontSize: "0.9rem", color: "#555" }}>{entry.date}</p>
+                  > 
+                  <p style={{ fontSize: "0.9rem", color: "#555" }}>{entry.date}</p>
                     {entry.image && (
                       <img
                         src={entry.image}
@@ -265,15 +293,46 @@ export default function Festival() {
                         style={{ width: "100%", maxWidth: "400px", borderRadius: "8px", marginBottom: "0.5rem" }}
                       />
                     )}
-                    <p>{entry.text}</p>
-                    <div style={{ marginTop: "0.5rem" }}>
-                      <button onClick={() => handleEditDiary(f.id, entry)} style={{ marginRight: "0.5rem", backgroundColor: "#64b5f6", color: "white", border: "none", borderRadius: "4px", padding: "3px 8px", cursor: "pointer" }}>編集</button>
-                      <button onClick={() => handleDeleteDiary(f.id, entry.timestamp)} style={{ backgroundColor: "#ef5350", color: "white", border: "none", borderRadius: "4px", padding: "3px 8px", cursor: "pointer" }}>削除</button>
-                    </div>
-                  </div>
-                ))}
+                  <p>{entry.text}</p>
+                  <div style={{ marginTop: "0.5rem" }}>
+                    <button
+                      onClick={() => {
+                        if (!requireLogin()) return;
+                        handleEditDiary(f.id, entry); // ← ここで関数を使用
+                      }}
+                      style={{
+                        backgroundColor: "#64b5f6",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "5px",
+                        padding: "0.4rem 0.8rem",
+                        cursor: "pointer",
+                        marginRight: "0.5rem",
+                      }}
+                    >
+                    編集する
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!requireLogin()) return;
+                      handleDeleteDiary(f.id, entry.timestamp);
+                    }}
+                    style={{
+                      backgroundColor: "#e57373",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "5px",
+                      padding: "0.4rem 0.8rem",
+                      cursor: "pointer",
+                    }}
+                  >
+                  削除
+                </button>
               </div>
-            )}
+            </div>
+          ))}
+        </div>
+      )}
           </div>
         ));
     }
