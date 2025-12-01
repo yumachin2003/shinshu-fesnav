@@ -1,11 +1,14 @@
 // 必要なモジュールやコンポーネントのインポート
 import React, { useState, useEffect } from "react";
+import { AppShell, Group, Title, Button } from '@mantine/core';
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Festival from "./pages/Festival";
 import Account from "./pages/Account";
+import FestivalDetail from "./pages/FestivalDetail"; // 詳細ページコンポーネントをインポート
 import ItemManagement from "./pages/ItemManagement";
+import './App.css'; // アプリケーション全体のスタイルをインポート
 
 // ユーザー情報共有のためのContext作成
 export const UserContext = React.createContext();
@@ -36,25 +39,33 @@ export default function App() {
     // UserContext.Providerで、userとsetUserを子コンポーネントに提供
     <UserContext.Provider value={{ user, setUser }}>
       <Router>
-        <div className="App">
-          <header>
-            <h1>信州お祭りナビ</h1>
-            {/* ナビゲーションバー */}
-            <nav style={{ padding: "1rem", borderBottom: "1px solid #ccc", width: '100%', textAlign: 'center' }}>
-              <Link to="/festivals" style={{ marginRight: "1rem" }}>お祭り</Link>
-              <Link to="/items" style={{ marginRight: "1rem" }}>アイテム管理</Link> {/* 新しいページへのリンクを追加 */}
-              <Link to="/account">アカウント</Link>
-            </nav>
-          </header>
-          {/* ルーティング設定 */}
-          <Routes>
-            <Route path="/" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/festivals" element={<Festival />} />
-            <Route path="/items" element={<ItemManagement />} /> {/* 新しいページのルートを追加 */}
-            <Route path="/account" element={<Account />} />
-          </Routes>
-        </div>
+        <AppShell
+          header={{ height: 60 }}
+          padding="md"
+        >
+          <AppShell.Header>
+            <Group h="100%" px="md" justify="space-between">
+              <Title order={1} size="h3">信州お祭りナビ</Title>
+              <Group>
+                <Button component={Link} to="/festivals" variant="subtle">お祭り</Button>
+                <Button component={Link} to="/items" variant="subtle">アイテム管理</Button>
+                <Button component={Link} to="/account" variant="subtle">アカウント</Button>
+              </Group>
+            </Group>
+          </AppShell.Header>
+
+          <AppShell.Main>
+            {/* ルーティング設定 */}
+            <Routes>
+              <Route path="/" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/festivals" element={<Festival />} /> {/* お祭り一覧ページ */}
+              <Route path="/festivals/:id" element={<FestivalDetail />} /> {/* お祭り詳細ページ */}
+              <Route path="/items" element={<ItemManagement />} /> {/* 新しいページのルートを追加 */}
+              <Route path="/account" element={<Account />} />
+            </Routes>
+          </AppShell.Main>
+        </AppShell>
       </Router>
     </UserContext.Provider>
   );

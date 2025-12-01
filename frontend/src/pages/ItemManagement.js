@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 // API通信ロジックを分離したモジュールをインポート
+import { Container, Title, Table, Alert, Text } from '@mantine/core';
 import { getFestivals, createFestival } from '../utils/apiService';
 import useApiData from '../hooks/useApiData';
 
@@ -7,6 +8,11 @@ const INITIAL_STATE = {
   name: '',
   date: '',
   location: '',
+  description: '',
+  access: '',
+  attendance: '',
+  latitude: '',
+  longitude: '',
 };
 
 function ItemManagement() {
@@ -17,7 +23,12 @@ function ItemManagement() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewFestival({ ...newFestival, [name]: value });
+    // 動員数、緯度、経度は数値として扱う
+    const isNumeric = ['attendance', 'latitude', 'longitude'].includes(name);
+    setNewFestival({
+      ...newFestival,
+      [name]: isNumeric && value !== '' ? parseFloat(value) : value,
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -37,66 +48,39 @@ function ItemManagement() {
   };
 
   return (
-    <div className="container">
-      <div className="card">
-        <h1>お祭り管理</h1>
+    <Container>
+      <Title order={2} ta="center" my="xl">お祭り管理</Title>
+      <Text c="dimmed" ta="center" mb="xl">
+        このページは管理者用です。お祭りの登録は、お祭りページの「お祭り登録」タブからも行えます。
+      </Text>
 
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="name"
-            value={newFestival.name}
-            onChange={handleInputChange}
-            placeholder="お祭り名"
-            disabled={loading}
-          />
-          <input
-            type="date"
-            name="date"
-            value={newFestival.date}
-            onChange={handleInputChange}
-            placeholder="開催日"
-            disabled={loading}
-          />
-          <input
-            type="text"
-            name="location"
-            value={newFestival.location}
-            onChange={handleInputChange}
-            placeholder="開催場所"
-            disabled={loading} // ローディング中は入力を無効化
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? '処理中...' : 'お祭りを追加'}
-          </button>
-        </form>
-
-        <h2>登録済みのお祭り</h2>
-        {/* フォーム送信時のエラーメッセージ */}
-        {submitError && <p style={{ color: 'red' }}>{submitError}</p>}
-        {/* データ取得時のエラーメッセージ */}
-        {error && <p style={{ color: 'red' }}>お祭りデータの読み込みに失敗しました。</p>}
-        {/* ローディング表示 */}
-        {loading ? (
-          <p>読み込み中...</p>
-        ) : festivals && (
-          <table>
-            <thead>
-              <tr><th>名前</th><th>開催日</th><th>場所</th></tr>
-            </thead>
-            <tbody>
-              {festivals.map((festival) => (
-                <tr key={festival.id}>
-                  <td>{festival.name}</td>
-                  <td>{festival.date}</td>
-                  <td>{festival.location}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-    </div>
+      <Title order={3} mt="xl" mb="md">登録済みのお祭り</Title>
+      {submitError && <Alert color="red" title="エラー">{submitError}</Alert>}
+      {error && <Alert color="red" title="エラー">お祭りデータの読み込みに失敗しました。</Alert>}
+      {loading && <Text>読み込み中...</Text>}
+      {festivals && (
+        <Table striped highlightOnHover withTableBorder withColumnBorders>
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th>名前</Table.Th>
+              <Table.Th>開催日</Table.Th>
+              <Table.Th>場所</Table.Th>
+              <Table.Th>動員数</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {festivals.map((festival) => (
+              <Table.Tr key={festival.id}>
+                <Table.Td>{festival.name}</Table.Td>
+                <Table.Td>{festival.date}</Table.Td>
+                <Table.Td>{festival.location}</Table.Td>
+                <Table.Td>{festival.attendance ? festival.attendance.toLocaleString() : ''}</Table.Td>
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+      )}
+    </Container>
   );
 }
 

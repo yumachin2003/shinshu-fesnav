@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
+import { Container, Title, Text, Button, Group, Card, List, Image, Grid, Tabs, Alert, Textarea } from '@mantine/core';
 import { UserContext } from "../App";
 import { getFestivals, getAccountData, updateFavorites, updateDiaries, getEditLogs, addEditLogToBackend } from "../utils/apiService";
 import useApiData from '../hooks/useApiData';
@@ -148,259 +149,106 @@ export default function Account() {
 
   // ローディングとエラーの状態管理 (編集履歴のローディングも追加)
   const isLoading = festivalsLoading || accountLoading || editLogsLoading;
-  if (isLoading) {
-    return <p>データを読み込み中...</p>;
-  }
-  if (!user || festivalsError || accountError || editLogsError) {
-    // ログインページにリダイレクトするか、エラーメッセージを表示
-    return <p style={{ color: 'red' }}>データの読み込みに失敗しました: {festivalsError?.message || accountError?.message || editLogsError?.message || '不明なエラー'}</p>;
-  }
+  if (isLoading) return <Container><Text>データを読み込み中...</Text></Container>;
+  if (!user || festivalsError || accountError || editLogsError) return <Container><Alert color="red" title="エラー">データの読み込みに失敗しました: {festivalsError?.message || accountError?.message || editLogsError?.message || '不明なエラー'}</Alert></Container>;
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
+    <Container>
       {/* Google翻訳ウィジェット */}
-      <div
-        id="google_translate_element"
-        style={{
-          position: "fixed",
-          bottom: 10,
-          right: 10,
-          zIndex: 9999,
-          background: "white",
-          borderRadius: "6px",
-          padding: "4px",
-          boxShadow: "0 0 6px rgba(0,0,0,0.1)",
-        }}
-      ></div>
+      <div id="google_translate_element" style={{ position: "fixed", bottom: 10, right: 10, zIndex: 9999 }}></div>
 
       {/* 上部固定ログアウトバー */}
-      <div
-        style={{
-          position: "sticky",
-          top: 0,
-          background: "#fff8e1",
-          padding: "10px 20px",
-          borderBottom: "2px solid #ffd54f",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          zIndex: 100,
-        }}
-      >
-        <h1 style={{ margin: 0 }}>{user.username}さんのマイページ</h1>
-        <button
-          onClick={handleLogout}
-          style={{
-            background: "#ff6666",
-            color: "white",
-            border: "none",
-            borderRadius: "6px",
-            padding: "6px 12px",
-            cursor: "pointer",
-            fontWeight: "bold",
-          }}
-        >
-          ログアウト
-        </button>
-      </div>
+      <Group justify="space-between" align="center" my="xl">
+        <Title order={2}>{user.username}さんのマイページ</Title>
+        <Button onClick={handleLogout} color="red">ログアウト</Button>
+      </Group>
 
-      {/* ❤️ お気に入り */}
-      <h2>❤️ お気に入りのお祭り</h2>
-      <ul>
-        {Object.entries(favorites)
-          .filter(([_, v]) => v)
-          .map(([fid]) => {
-            const f = festivals.find((x) => x.id === Number(fid));
-            return (
-              <li key={fid}>
-                {f?.name}
-                <button
-                  onClick={() => {
-                    const updated = { ...favorites, [fid]: false };
-                    saveFavorites(updated);
-                    logEditAction(f, "お気に入りを解除しました");
-                  }}
-                  style={{
-                    marginLeft: "10px",
-                    color: "red",
-                    border: "1px solid red",
-                    borderRadius: "5px",
-                    background: "white",
-                    cursor: "pointer",
-                  }}
-                >
-                  お気に入り解除
-                </button>
-              </li>
-            );
-          })}
-      </ul>
+      <Tabs defaultValue="favorites">
+        <Tabs.List>
+          <Tabs.Tab value="favorites">❤️ お気に入り</Tabs.Tab>
+          <Tabs.Tab value="diaries">📔 日記</Tabs.Tab>
+          <Tabs.Tab value="photos">📷 写真アルバム</Tabs.Tab>
+          <Tabs.Tab value="logs">🕒 編集履歴</Tabs.Tab>
+        </Tabs.List>
 
-      {/* 日記 */}
-      <h2>📔 自分の日記</h2>
-      {Object.entries(diaries).length === 0 ? (
-        <p>まだ日記はありません。</p>
-      ) : (
-        Object.entries(diaries).map(([fid, entries]) =>
-          entries.map((entry) => {
-            const f = festivals.find((x) => x.id === Number(fid));
-            return (
-              <div key={entry.timestamp} style={{ marginBottom: "1rem" }}>
-                <strong>{f?.name}</strong> — {entry.date}
-                <br />
-                <textarea
-                  value={entry.text}
-                  onChange={(e) => {
-                    const updated = { ...diaries };
-                    const idx = updated[fid].findIndex(
-                      (x) => x.timestamp === entry.timestamp
-                    );
-                    updated[fid][idx].text = e.target.value;
-                    saveDiaries(updated);
-                    logEditAction(f, "日記内容を編集しました");
-                  }}
-                  style={{ width: "100%", height: "60px" }}
-                />
-                {entry.image && (
-                  <>
-                    <img
-                      src={entry.image}
-                      alt=""
-                      style={{
-                        width: "100%",
-                        maxWidth: "400px",
-                        borderRadius: "8px",
-                        marginTop: "0.5rem",
-                      }}
-                    />
-                    <div style={{ marginTop: "5px" }}>
-                      <button
-                        onClick={() => handleDeletePhoto(fid, entry.timestamp)}
-                        style={{
-                          background: "#ff4444",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "5px",
-                          padding: "4px 8px",
-                          cursor: "pointer",
-                          marginRight: "5px",
-                        }}
-                      >
-                        削除
-                      </button>
-                      <label
-                        style={{
-                          background: "#2196f3",
-                          color: "white",
-                          borderRadius: "5px",
-                          padding: "4px 8px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        変更
-                        <input
-                          type="file"
-                          accept="image/*"
-                          style={{ display: "none" }}
-                          onChange={(e) =>
-                            handleChangePhoto(fid, entry.timestamp, e.target.files[0])
-                          }
-                        />
-                      </label>
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })
-        )
-      )}
+        <Tabs.Panel value="favorites" pt="lg">
+          <List spacing="xs" size="sm" center>
+            {Object.entries(favorites).filter(([_, v]) => v).length === 0 ? <Text>お気に入りのお祭りはまだありません。</Text> : null}
+            {Object.entries(favorites).filter(([_, v]) => v).map(([fid]) => {
+              const f = festivals.find((x) => x.id === Number(fid));
+              return (
+                <List.Item key={fid}>
+                  <Group justify="space-between">
+                    <Text>{f?.name}</Text>
+                    <Button size="xs" variant="light" color="red" onClick={() => {
+                      const updated = { ...favorites, [fid]: false };
+                      saveFavorites(updated);
+                      logEditAction(f, "お気に入りを解除しました");
+                    }}>お気に入り解除</Button>
+                  </Group>
+                </List.Item>
+              );
+            })}
+          </List>
+        </Tabs.Panel>
 
-      {/* 写真追加 */}
-      <h3>📸 写真を追加</h3>
-      {festivals.map((f) => (
-        <div key={f.id} style={{ marginBottom: "1rem" }}>
-          <strong>{f.name}</strong>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => handleAddPhoto(f.id, e.target.files[0])}
-          />
-        </div>
-      ))}
+        <Tabs.Panel value="diaries" pt="lg">
+          {Object.entries(diaries).length === 0 ? <Text>まだ日記はありません。</Text> : (
+            Object.entries(diaries).map(([fid, entries]) => entries.map((entry) => {
+              const f = festivals.find((x) => x.id === Number(fid));
+              return (
+                <Card withBorder p="md" mb="md" key={entry.timestamp}>
+                  <Text fw={500}>{f?.name}</Text>
+                  <Text size="xs" c="dimmed">{entry.date}</Text>
+                  <Textarea
+                    value={entry.text}
+                    onChange={(e) => {
+                      const updated = { ...diaries };
+                      const idx = updated[fid].findIndex((x) => x.timestamp === entry.timestamp);
+                      updated[fid][idx].text = e.target.value;
+                      saveDiaries(updated);
+                      logEditAction(f, "日記内容を編集しました");
+                    }}
+                    autosize minRows={2} my="sm"
+                  />
+                  {entry.image && <Image src={entry.image} alt="" maw={400} radius="md" my="sm" />}
+                </Card>
+              );
+            }))
+          )}
+        </Tabs.Panel>
 
-      {/* アップロード写真アルバム */}
-      <h2>📷 アップロード写真アルバム</h2>
-      {allPhotos.length ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-            gap: "10px",
-          }}
-        >
-          {allPhotos.map((e, i) => (
-            <img
-              key={i}
-              src={e.image}
-              alt=""
-              style={{
-                width: "100%",
-                height: "150px",
-                objectFit: "cover",
-                borderRadius: "10px",
-              }}
-            />
-          ))}
-        </div>
-      ) : (
-        <p>まだ写真がありません。</p>
-      )}
+        <Tabs.Panel value="photos" pt="lg">
+          {allPhotos.length === 0 ? <Text>まだ写真がありません。</Text> : (
+            <Grid>
+              {allPhotos.map((e, i) => (
+                <Grid.Col span={{ base: 6, sm: 4, md: 3 }} key={i}>
+                  <Image src={e.image} alt="" radius="md" fit="cover" h={150} />
+                </Grid.Col>
+              ))}
+            </Grid>
+          )}
+        </Tabs.Panel>
 
-      {/* 編集履歴ログ */}
-      <h2 style={{ marginTop: "2rem" }}>🕒 編集履歴ログ</h2>
-      <button
-        onClick={() => setShowAllLogs((prev) => !prev)}
-        style={{
-          marginBottom: "1rem",
-          backgroundColor: "#2196f3",
-          color: "white",
-          border: "none",
-          borderRadius: "6px",
-          padding: "8px 12px",
-          cursor: "pointer",
-        }}
-      >
-        {showAllLogs ? "自分の履歴に戻す" : "全期間の履歴を見る"}
-      </button>
-      <button
-        onClick={handleExportCSV}
-        style={{
-          marginLeft: "10px",
-          backgroundColor: "#4caf50",
-          color: "white",
-          border: "none",
-          borderRadius: "6px",
-          padding: "8px 12px",
-          cursor: "pointer",
-        }}
-      >
-        CSV形式で出力
-      </button>
-
-      {editLogs && editLogs.length === 0 ? (
-        <p>まだ編集履歴はありません。</p>
-      ) : (
-        <ul>
-          {editLogs.map((log, i) => (
-            <li key={i} style={{ marginBottom: "0.5rem" }}>
-              <strong>{log.festival}</strong> — {log.date}
-              <br />
-              <span style={{ color: "#555" }}>{log.content}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+        <Tabs.Panel value="logs" pt="lg">
+          <Group mb="md">
+            <Button onClick={() => setShowAllLogs((prev) => !prev)} variant="outline">
+              {showAllLogs ? "自分の履歴に戻す" : "全期間の履歴を見る"}
+            </Button>
+            <Button onClick={handleExportCSV} variant="light" color="green">CSV形式で出力</Button>
+          </Group>
+          {editLogs && editLogs.length === 0 ? <Text>まだ編集履歴はありません。</Text> : (
+            <List spacing="xs" size="sm">
+              {editLogs.map((log, i) => (
+                <List.Item key={i}>
+                  <Text><strong>{log.festival}</strong> — {log.date}</Text>
+                  <Text c="dimmed">{log.content}</Text>
+                </List.Item>
+              ))}
+            </List>
+          )}
+        </Tabs.Panel>
+      </Tabs>
+    </Container>
   );
 }
