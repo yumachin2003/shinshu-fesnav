@@ -12,6 +12,9 @@ class Festivals(db.Model):
    longitude = db.Column(db.Float)   # 経度
    attendance = db.Column(db.Integer, default=0)   #動員数
    attend_year = db.Column(db.Integer, default=0)
+   description = db.Column(db.Text, nullable=True) # 説明
+   access = db.Column(db.String(255), nullable=True) # アクセス
+   date_rule = db.Column(db.String(80), nullable=True) # 相対日付ルール
 
    def to_dict(self):
        return {
@@ -23,6 +26,9 @@ class Festivals(db.Model):
            'longitude': self.longitude,
            'attendance': self.attendance,
            'attend_year': self.attend_year,
+           'description': self.description,
+           'access': self.access,
+           'date_rule': self.date_rule,
        }
 
 class User(db.Model):

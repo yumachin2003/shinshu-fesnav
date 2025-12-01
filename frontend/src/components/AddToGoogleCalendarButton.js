@@ -1,4 +1,5 @@
 import React from "react";
+import { Button } from '@mantine/core';
 
 /**
  * Googleカレンダーにイベントを追加するボタン
@@ -29,24 +30,15 @@ export default function AddToGoogleCalendarButton({ name, location, date }) {
   };
 
   return (
-    <a
+    <Button
+      component="a"
       href={createGoogleCalendarUrl()}
       target="_blank"
       rel="noopener noreferrer"
-      className="festival-btn"
-      style={{
-        backgroundColor: "#34a853",
-        color: "white",
-        border: "none",
-        borderRadius: "6px",
-        padding: "6px 12px",
-        cursor: "pointer",
-        textDecoration: "none",
-        marginRight: "8px",
-        fontSize: "0.9rem",
-      }}
+      variant="light"
+      color="green"
     >
       📅 Googleカレンダーに追加
-    </a>
+    </Button>
   );
 }
