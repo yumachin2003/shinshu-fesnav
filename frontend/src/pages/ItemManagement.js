@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+// API通信ロジックを分離したモジュールをインポート
+import { Container, Title, Table, Alert, Text } from '@mantine/core';
 import { getFestivals, createFestival } from '../utils/apiService';
 import useApiData from '../hooks/useApiData';
 
@@ -6,6 +8,11 @@ const INITIAL_STATE = {
   name: '',
   date: '',
   location: '',
+  description: '',
+  access: '',
+  attendance: '',
+  latitude: '',
+  longitude: '',
 };
 
 function ItemManagement() {
@@ -29,7 +36,12 @@ function ItemManagement() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewFestival({ ...newFestival, [name]: value });
+    // 動員数、緯度、経度は数値として扱う
+    const isNumeric = ['attendance', 'latitude', 'longitude'].includes(name);
+    setNewFestival({
+      ...newFestival,
+      [name]: isNumeric && value !== '' ? parseFloat(value) : value,
+    });
   };
 
   const handleSubmit = async (e) => {

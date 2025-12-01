@@ -1,4 +1,5 @@
 import React from "react";
+import { Button } from '@mantine/core';
 
 /**
  * Outlook / Apple カレンダー (ICSファイル) に追加するボタン
@@ -44,20 +45,12 @@ END:VCALENDAR`;
   };
 
   return (
-    <button
+    <Button
       onClick={createICSFile}
-      className="festival-btn"
-      style={{
-        backgroundColor: "#0078d4",
-        color: "white",
-        border: "none",
-        borderRadius: "6px",
-        padding: "6px 12px",
-        cursor: "pointer",
-        fontSize: "0.9rem",
-      }}
+      variant="light"
+      color="blue"
     >
       🗓 iCal / Outlook に追加
-    </button>
+    </Button>
   );
 }
