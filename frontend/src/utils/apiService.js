@@ -13,7 +13,7 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // localStorageから認証トークンを取得します。トークンのキー名は実際のキーに合わせてください。
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('token');
     // トークンが存在する場合、リクエストヘッダーにAuthorization情報を追加します。
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
