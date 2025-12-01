@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, current_app, g
 from .models import Festivals, User, UserFavorite, UserDiary, EditLog
 from datetime import datetime, timedelta
 from . import db
+from .utils import calculate_concrete_date # 日付計算ユーティリティをインポート
 import jwt as pyjwt
 import datetime
 from functools import wraps
@@ -49,8 +50,26 @@ def test_connection():
 # GET /api/festivals : 全てのお祭りを取得
 @api_bp.route('/festivals', methods=['GET'])
 def get_festivals():
+    current_year = datetime.datetime.now().year
     festivals = Festivals.query.all()
-    return jsonify([festival.to_dict() for festival in festivals])
+    festival_list = []
+    for festival in festivals:
+        festival_data = festival.to_dict()
+        
+        # date_rule が存在し、具体的な日付 (date) がない場合、日付を計算する
+        if festival_data.get('date_rule') and not festival_data.get('date'):
+            calculated_date = calculate_concrete_date(current_year, festival_data['date_rule'])
+            if calculated_date:
+                festival_data['date'] = calculated_date
+        
+        # 翌年の日付も計算してみる（例：今年の開催日が既に過ぎている場合）
+        if festival_data.get('date'):
+            if datetime.datetime.strptime(festival_data['date'], '%Y-%m-%d').date() < datetime.date.today() and festival_data.get('date_rule'):
+                 calculated_date_next_year = calculate_concrete_date(current_year + 1, festival_data['date_rule'])
+                 if calculated_date_next_year:
+                     festival_data['date'] = calculated_date_next_year
+        festival_list.append(festival_data)
+    return jsonify(festival_list)
 
 # POST /api/festivals : 新しいお祭りを追加
 @api_bp.route('/festivals', methods=['POST'])
@@ -62,19 +81,39 @@ def add_festival():
 
     data = request.get_json()
 
-    if not data or not data.get('name') or not data.get('date') or not data.get('location'):
-        return jsonify({'error': 'Name, date, and location are required'}), 400
+    # 必須項目のチェック
+    if not data or not data.get('name') or not data.get('location'):
+        return jsonify({'error': 'Name and location are required'}), 400
+    
+    # 日付は date または date_rule のどちらかがあればOK
+    if not data.get('date') and not data.get('date_rule'):
+        return jsonify({'error': 'Either date or date_rule is required'}), 400
 
-    existing_festival = Festivals.query.filter_by(name=data['name'], date=data['date']).first()
-    if existing_festival:
-        return jsonify({'error': '同じ名前と日付のお祭りが既に存在します。'}), 409
+    # 同じ名前と日付のお祭りが既に存在するかチェック
+    if data.get('date'):
+        existing_festival = Festivals.query.filter_by(name=data['name'], date=data['date']).first()
+        if existing_festival:
+            return jsonify({'error': '同じ名前と日付のお祭りが既に存在します。'}), 409 # 409 Conflict
 
+    fes_date = None
     try:
-        fes_date = datetime.datetime.strptime(data['date'], '%Y-%m-%d').date()
-    except ValueError:
-        return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
+        if data.get('date'):
+            fes_date = datetime.datetime.strptime(data['date'], '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        # dateが空文字列やNoneの場合も考慮
+        pass
 
-    new_festival = Festivals(name=data['name'], date=fes_date, location=data['location'])
+    new_festival = Festivals(
+        name=data['name'],
+        date=fes_date,
+        location=data['location'],
+        description=data.get('description'),
+        access=data.get('access'),
+        attendance=data.get('attendance'),
+        latitude=data.get('latitude'),
+        longitude=data.get('longitude'),
+        date_rule=data.get('date_rule')
+    )
     db.session.add(new_festival)
     db.session.commit()
     return jsonify(new_festival.to_dict()), 201

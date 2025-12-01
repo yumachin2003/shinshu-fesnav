@@ -98,3 +98,13 @@ th {
 .festival-btn:hover {
   background-color: #0056b3;
 }
+
+/* お祭りカードのホバー効果 */
+.festival-card {
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.festival-card:hover {
+  transform: translateY(-5px);
+  cursor: pointer;
+}
