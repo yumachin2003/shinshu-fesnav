@@ -32,4 +32,3 @@ nginx.conf
 .env.production.local
 .env
 
-package-lock.json
