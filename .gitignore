@@ -1,4 +1,5 @@
 .venv
+venv
 frontend/package-lock.json
 .DS_Store
 start.sh
