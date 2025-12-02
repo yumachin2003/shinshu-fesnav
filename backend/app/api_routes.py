@@ -51,24 +51,26 @@ def test_connection():
 @api_bp.route('/festivals', methods=['GET'])
 def get_festivals():
     current_year = datetime.datetime.now().year
-    festivals = Festivals.query.all()
+    # 必要なカラムのみを明示的に取得する
+    festivals_query = db.session.query(
+        Festivals.id,
+        Festivals.name,
+        Festivals.date,
+        Festivals.location,
+        Festivals.latitude,
+        Festivals.longitude,
+        Festivals.attendance,
+    ).all()
+
     festival_list = []
-    for festival in festivals:
-        festival_data = festival.to_dict()
-        
-        # date_rule が存在し、具体的な日付 (date) がない場合、日付を計算する
-        if festival_data.get('date_rule') and not festival_data.get('date'):
-            calculated_date = calculate_concrete_date(current_year, festival_data['date_rule'])
-            if calculated_date:
-                festival_data['date'] = calculated_date
-        
-        # 翌年の日付も計算してみる（例：今年の開催日が既に過ぎている場合）
-        if festival_data.get('date'):
-            if datetime.datetime.strptime(festival_data['date'], '%Y-%m-%d').date() < datetime.date.today() and festival_data.get('date_rule'):
-                 calculated_date_next_year = calculate_concrete_date(current_year + 1, festival_data['date_rule'])
-                 if calculated_date_next_year:
-                     festival_data['date'] = calculated_date_next_year
+    for festival in festivals_query:
+        festival_data = {
+            'id': festival.id, 'name': festival.name, 'date': festival.date.strftime('%Y-%m-%d') if festival.date else None,
+            'location': festival.location, 'latitude': festival.latitude, 'longitude': festival.longitude, 'attendance': festival.attendance
+        }
+
         festival_list.append(festival_data)
+
     return jsonify(festival_list)
 
 # POST /api/festivals : 新しいお祭りを追加
@@ -85,10 +87,6 @@ def add_festival():
     if not data or not data.get('name') or not data.get('location'):
         return jsonify({'error': 'Name and location are required'}), 400
     
-    # 日付は date または date_rule のどちらかがあればOK
-    if not data.get('date') and not data.get('date_rule'):
-        return jsonify({'error': 'Either date or date_rule is required'}), 400
-
     # 同じ名前と日付のお祭りが既に存在するかチェック
     if data.get('date'):
         existing_festival = Festivals.query.filter_by(name=data['name'], date=data['date']).first()
@@ -108,11 +106,9 @@ def add_festival():
         date=fes_date,
         location=data['location'],
         description=data.get('description'),
-        access=data.get('access'),
         attendance=data.get('attendance'),
         latitude=data.get('latitude'),
-        longitude=data.get('longitude'),
-        date_rule=data.get('date_rule')
+        longitude=data.get('longitude')
     )
     db.session.add(new_festival)
     db.session.commit()

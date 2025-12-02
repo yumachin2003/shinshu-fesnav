@@ -58,7 +58,7 @@ export default function App() {
         >
           <AppShell.Header>
             <Group h="100%" px="md" justify="space-between">
-              <Title order={1} size="h3">信州お祭りナビ</Title>
+              <Title order={1} size="h3">信州おまつりナビ</Title>
               <Group>
                 <Button component={Link} to="/festivals" variant="subtle">お祭り</Button>
                 <Button component={Link} to="/items" variant="subtle">アイテム管理</Button>

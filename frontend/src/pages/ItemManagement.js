@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 // API通信ロジックを分離したモジュールをインポート
-import { Container, Title, Table, Alert, Text } from '@mantine/core';
+import { Container, Title, Table, Alert, Text, TextInput, Button } from '@mantine/core';
 import { getFestivals, createFestival } from '../utils/apiService';
 import useApiData from '../hooks/useApiData';
 
@@ -69,49 +69,50 @@ function ItemManagement() {
   };
 
   return (
-    <div className="container">
-      <div className="card">
-        <h1>お祭り管理</h1>
+    <Container>
+      <Title order={1}>お祭り管理</Title>
 
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            name="name"
-            value={newFestival.name}
-            onChange={handleInputChange}
-            placeholder="お祭り名"
-            disabled={loading}
-          />
-          <input
-            type="date"
-            name="date"
-            value={newFestival.date}
-            onChange={handleInputChange}
-            placeholder="開催日"
-            disabled={loading}
-          />
-          <input
-            type="text"
-            name="location"
-            value={newFestival.location}
-            onChange={handleInputChange}
-            placeholder="開催場所"
-            disabled={loading}
-          />
-          <button type="submit" disabled={loading}>
-            {loading ? '処理中...' : 'お祭りを追加'}
-          </button>
-        </form>
+      <form onSubmit={handleSubmit}>
+        <TextInput
+          name="name"
+          value={newFestival.name}
+          onChange={handleInputChange}
+          placeholder="お祭り名"
+          disabled={loading}
+          required
+        />
+        <TextInput
+          type="date"
+          name="date"
+          value={newFestival.date}
+          onChange={handleInputChange}
+          placeholder="開催日"
+          disabled={loading}
+          required
+        />
+        <TextInput
+          name="location"
+          value={newFestival.location}
+          onChange={handleInputChange}
+          placeholder="開催場所"
+          disabled={loading}
+          required
+        />
+        <Button type="submit" loading={loading} mt="md">
+          お祭りを追加
+        </Button>
+      </form>
 
-        <h2>登録済みのお祭り</h2>
+      <Title order={2} mt="xl">登録済みのお祭り</Title>
 
-        {submitError && <p style={{ color: 'red' }}>{submitError}</p>}
-        {error && <p style={{ color: 'red' }}>お祭りデータの読み込みに失敗しました。</p>}
+      {submitError && <Alert color="red" mt="md">{submitError}</Alert>}
+      {error && <Alert color="red" mt="md">お祭りデータの読み込みに失敗しました。</Alert>}
 
-        {loading ? (
-          <p>読み込み中...</p>
-        ) : festivals && (
-          <table>
+      {loading ? (
+        <Text mt="md">読み込み中...</Text>
+      ) : festivals && (
+        <Table mt="md">
+          <Table.Thead>
             <thead>
               <tr>
                 <th>名前</th>
@@ -119,19 +120,21 @@ function ItemManagement() {
                 <th>場所</th>
               </tr>
             </thead>
+          </Table.Thead>
+          <Table.Tbody>
             <tbody>
               {festivals.map((festival) => (
-                <tr key={festival.id}>
-                  <td>{festival.name}</td>
-                  <td>{festival.date}</td>
-                  <td>{festival.location}</td>
-                </tr>
+                <Table.Tr key={festival.id}>
+                  <Table.Td>{festival.name}</Table.Td>
+                  <Table.Td>{festival.date}</Table.Td>
+                  <Table.Td>{festival.location}</Table.Td>
+                </Table.Tr>
               ))}
             </tbody>
-          </table>
-        )}
-      </div>
-    </div>
+          </Table.Tbody>
+        </Table>
+      )}
+    </Container>
   );
 }
 

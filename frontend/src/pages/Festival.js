@@ -2,8 +2,8 @@ import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Container, Title, Text, SimpleGrid, Card, SegmentedControl, Center, Alert, Select, Group } from '@mantine/core';
 import { UserContext } from "../App";
-import { getFestivals } from '../utils/apiService';
-import useApiData from '../hooks/useApiData';
+import { getFestivals, getAccountData } from '../utils/apiService'; // getAccountDataをインポート
+import useApiData from '../hooks/useApiData'; // useApiDataフックをインポート
 import { initGoogleTranslate } from "../utils/translate";
 import FestivalCalendar from "../components/FestivalCalendar";
 import FestivalMap from '../components/FestivalMap';
@@ -17,7 +17,7 @@ export default function Festival() {
 
 
   // --- APIからデータを取得 ---
-  const { data: festivals, loading: festivalsLoading, error: festivalsError } = useApiData(getFestivals);
+  const { data: festivals, loading: festivalsLoading, error: festivalsError, refetch: refetchFestivals } = useApiData(getFestivals);
   const { data: accountData, loading: accountLoading, error: accountError } =
   useApiData(
     user ? getAccountData : async () => ({ data: null }), // ← 未ログインではAPIを呼ばない
@@ -78,17 +78,6 @@ export default function Festival() {
         return festivalsCopy.sort((a, b) => a.id - b.id);
     }
   }, [festivals, sortBy]);
-
-
-  if (!user) {
-    return (
-      <Container>
-        <Alert color="red" title="アクセス不可">
-          このページを表示するにはログインが必要です。<Link to="/">ログインページへ</Link>
-        </Alert>
-      </Container>
-    );
-  }
 
   if (isLoading) { // accountLoadingを削除
     return <Container><Text>読み込み中...</Text></Container>;
