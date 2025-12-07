@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Container, Title, Text, SimpleGrid, Card, SegmentedControl, Center, Alert, Select, Group } from '@mantine/core';
+import { Container, Title, Text, SimpleGrid, Card, SegmentedControl, Center, Alert, Select, Group, LoadingOverlay, Box } from '@mantine/core';
 import { UserContext } from "../App";
 import { getFestivals, getAccountData } from '../utils/apiService'; // getAccountDataをインポート
 import useApiData from '../hooks/useApiData'; // useApiDataフックをインポート
@@ -79,10 +79,6 @@ export default function Festival() {
     }
   }, [festivals, sortBy]);
 
-  if (isLoading) { // accountLoadingを削除
-    return <Container><Text>読み込み中...</Text></Container>;
-  }
-
   if (error) {
     return <Container><Alert color="red" title="エラー">🚨 {error.message || 'データの読み込み中にエラーが発生しました。'}</Alert></Container>;
   }
@@ -122,43 +118,46 @@ export default function Festival() {
   };
 
   return (
-    <Container>
-      {/* 翻訳ウィジェット */}
-      <div id="google_translate_element" style={{ position: "fixed", bottom: 10, left: 10, zIndex: 9999 }}></div>
-      
-      <Title order={2} ta="center" mb="xl">長野県のお祭り</Title>
+    <Box pos="relative">
+      <LoadingOverlay visible={isLoading} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
+      <Container>
+        {/* 翻訳ウィジェット */}
+        <div id="google_translate_element" style={{ position: "fixed", bottom: 10, left: 10, zIndex: 9999 }}></div>
+        
+        <Title order={2} ta="center" mb="xl">長野県のお祭り</Title>
 
-      {/* 操作パネル */}
-      <Group justify="space-between" mb="xl">
-        {/* 表示モード切り替え */}
-        <SegmentedControl
-          value={viewMode}
-          onChange={setViewMode}
-          data={[
-            { label: 'リスト', value: 'list' },
-            { label: 'イベントカレンダー', value: 'calendar' },
-            { label: '地図', value: 'map' },
-            { label: 'お祭り登録', value: 'register' },
-          ]}
-        />
-        {/* 並び替え */}
-        {viewMode === 'list' && (
-          <Select
-            label="並び替え"
-            value={sortBy}
-            onChange={setSortBy}
+        {/* 操作パネル */}
+        <Group justify="space-between" mb="xl">
+          {/* 表示モード切り替え */}
+          <SegmentedControl
+            value={viewMode}
+            onChange={setViewMode}
             data={[
-              { label: 'デフォルト', value: 'default' },
-              { label: '開催日が近い順', value: 'date' },
-              { label: '人気順', value: 'popularity' },
+              { label: 'リスト', value: 'list' },
+              { label: 'イベントカレンダー', value: 'calendar' },
+              { label: '地図', value: 'map' },
+              { label: 'お祭り登録', value: 'register' },
             ]}
-            style={{ width: 180 }}
           />
-        )}
-      </Group>
+          {/* 並び替え */}
+          {viewMode === 'list' && (
+            <Select
+              label="並び替え"
+              value={sortBy}
+              onChange={setSortBy}
+              data={[
+                { label: 'デフォルト', value: 'default' },
+                { label: '開催日が近い順', value: 'date' },
+                { label: '人気順', value: 'popularity' },
+              ]}
+              style={{ width: 180 }}
+            />
+          )}
+        </Group>
 
-      {/* コンテンツの描画 */}
-      {renderContent()}
-    </Container>
+        {/* コンテンツの描画 */}
+        {renderContent()}
+      </Container>
+    </Box>
   );
 }
