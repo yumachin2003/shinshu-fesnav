@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Container, Title, Text, SimpleGrid, Card, SegmentedControl, Center, Alert, Select, Group, LoadingOverlay, Box } from '@mantine/core';
+import { Container, Title, Text, SimpleGrid, Card, SegmentedControl, Alert, Select, Group, LoadingOverlay, Box, Image, Badge, Paper, Stack } from '@mantine/core';
+import { IconCalendar, IconMapPin } from '@tabler/icons-react';
 import { UserContext } from "../App";
 import { getFestivals, getAccountData } from '../utils/apiService'; // getAccountDataをインポート
 import useApiData from '../hooks/useApiData'; // useApiDataフックをインポート
@@ -97,26 +98,49 @@ export default function Festival() {
       case 'list':
       default:
         return (
-          <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
+          <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="xl">
             {sortedFestivals.map((f) => (
               <Card
                 key={f.id}
                 shadow="sm"
                 padding="lg"
                 radius="md"
-                withBorder
                 component={Link}
-                className="festival-card"
                 to={`/festivals/${f.id}`}
+                withBorder
+                style={{ transition: 'transform 0.2s ease, box-shadow 0.2s ease' }}
+                className="festival-card-hover" // CSSでホバーエフェクトを追加するためのクラス
               >
-                <Title order={3} ta="center">{f.name}</Title>
+                <Card.Section>
+                  {/* お祭りの画像（ダミー画像を表示） */}
+                  <Image
+                    src={f.image_url || `https://picsum.photos/seed/${f.id}/400/200`}
+                    height={160}
+                    alt={f.name}
+                  />
+                </Card.Section>
+
+                <Group justify="space-between" mt="md" mb="xs">
+                  <Title order={4} fw={500}>{f.name}</Title>
+                  {new Date(f.date) > new Date() && <Badge color="pink">開催予定</Badge>}
+                </Group>
+
+                <Stack gap="xs" mt="sm">
+                  <Group gap="xs">
+                    <IconCalendar size={16} stroke={1.5} />
+                    <Text size="sm" c="dimmed">{f.date || '未定'}</Text>
+                  </Group>
+                  <Group gap="xs">
+                    <IconMapPin size={16} stroke={1.5} />
+                    <Text size="sm" c="dimmed" truncate>{f.location || '未定'}</Text>
+                  </Group>
+                </Stack>
               </Card>
             ))}
           </SimpleGrid>
         );
     }
   };
-
   return (
     <Box pos="relative">
       <LoadingOverlay visible={isLoading} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
@@ -126,34 +150,36 @@ export default function Festival() {
         
         <Title order={2} ta="center" mb="xl">長野県のお祭り</Title>
 
-        {/* 操作パネル */}
-        <Group justify="space-between" mb="xl">
-          {/* 表示モード切り替え */}
-          <SegmentedControl
-            value={viewMode}
-            onChange={setViewMode}
-            data={[
-              { label: 'リスト', value: 'list' },
-              { label: 'イベントカレンダー', value: 'calendar' },
-              { label: '地図', value: 'map' },
-              { label: 'お祭り登録', value: 'register' },
-            ]}
-          />
-          {/* 並び替え */}
-          {viewMode === 'list' && (
-            <Select
-              label="並び替え"
-              value={sortBy}
-              onChange={setSortBy}
+        {/* 操作パネル (Paperで囲んで視覚的にまとめる) */}
+        <Paper shadow="xs" p="md" mb="xl" withBorder>
+          <Group justify="space-between">
+            {/* 表示モード切り替え */}
+            <SegmentedControl
+              value={viewMode}
+              onChange={setViewMode}
               data={[
-                { label: 'デフォルト', value: 'default' },
-                { label: '開催日が近い順', value: 'date' },
-                { label: '人気順', value: 'popularity' },
+                { label: 'リスト', value: 'list' },
+                { label: 'カレンダー', value: 'calendar' },
+                { label: '地図', value: 'map' },
+                { label: '登録', value: 'register' },
               ]}
-              style={{ width: 180 }}
             />
-          )}
-        </Group>
+            {/* 並び替え */}
+            {viewMode === 'list' && (
+              <Select
+                placeholder="並び替え"
+                value={sortBy}
+                onChange={(value) => setSortBy(value || 'default')}
+                data={[
+                  { label: 'デフォルト', value: 'default' },
+                  { label: '開催日が近い順', value: 'date' },
+                  { label: '人気順', value: 'popularity' },
+                ]}
+                style={{ width: 160 }}
+              />
+            )}
+          </Group>
+        </Paper>
 
         {/* コンテンツの描画 */}
         {renderContent()}
