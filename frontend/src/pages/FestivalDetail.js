@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Container, Card, Title, Text, Group, Button, Textarea, FileInput, Image, Alert, Paper, Stack } from '@mantine/core';
+import { Container, Card, Title, Text, Group, Button, Textarea, FileInput, Image, Alert, Paper, Stack, AspectRatio } from '@mantine/core';
+import { IconCalendar, IconMapPin, IconRoad, IconUsers } from '@tabler/icons-react';
 import Favorite from "../utils/Favorite";
 import { UserContext } from "../App";
 import { getFestivals, getAccountData, updateFavorites, updateDiaries, addEditLogToBackend } from "../utils/apiService";
@@ -151,14 +152,33 @@ export default function FestivalDetail() {
         ← お祭り一覧に戻る
       </Button>
       <Card shadow="sm" padding="lg" radius="md" withBorder>
+        {/* --- お祭りの写真 --- */}
+        <Card.Section mb="lg">
+          <AspectRatio ratio={16 / 9}>
+            <Image
+              src={festival.image_url || `https://picsum.photos/seed/${festival.id}/800/450`}
+              alt={festival.name}
+            />
+          </AspectRatio>
+        </Card.Section>
+
         <Title order={2}>{festival.name}</Title>
+
+        {/* --- お祭りの基本情報 --- */}
         <Stack mt="md">
-          <Text><strong>開催日:</strong> {festival.date || '未定'}</Text>
-          <Text><strong>場所:</strong> {festival.location || '未定'}</Text>
-          <Text><strong>アクセス:</strong> {festival.access || '情報なし'}</Text>
-          <Text><strong>動員数:</strong> {festival.attendance ? `${festival.attendance.toLocaleString()}人` : '情報なし'}</Text>
-          <Text>{festival.description}</Text>
+          <Group><IconCalendar size={20} stroke={1.5} /><Text><strong>開催日:</strong> {festival.date || '未定'}</Text></Group>
+          <Group><IconMapPin size={20} stroke={1.5} /><Text><strong>場所:</strong> {festival.location || '未定'}</Text></Group>
+          <Group><IconRoad size={20} stroke={1.5} /><Text><strong>アクセス:</strong> {festival.access || '情報なし'}</Text></Group>
+          <Group><IconUsers size={20} stroke={1.5} /><Text><strong>動員数:</strong> {festival.attendance ? `${festival.attendance.toLocaleString()}人` : '情報なし'}</Text></Group>
         </Stack>
+
+        {/* --- お祭りの概要 --- */}
+        <Paper mt="xl" p="lg" bg="gray.0" withBorder>
+            <Title order={4} mb="sm">お祭りの概要</Title>
+            <Text lh="lg" style={{ whiteSpace: 'pre-wrap' }}>
+              {festival.description || 'このお祭りの概要はまだ登録されていません。'}
+            </Text>
+        </Paper>
 
         <Group mt="md">
           <AddToGoogleCalendarButton name={festival.name} location={festival.location} date={festival.date} />
