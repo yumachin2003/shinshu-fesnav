@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Container, Card, Title, Text, Group, Button, Textarea, FileInput, Image, Alert, Paper, Stack, AspectRatio } from '@mantine/core';
+import { Container, Card, Title, Text, Group, Button, Textarea, FileInput, Image, Alert, Paper, Stack, AspectRatio, Rating, List, Avatar, Divider } from '@mantine/core';
 import { IconCalendar, IconMapPin, IconRoad, IconUsers } from '@tabler/icons-react';
 import Favorite from "../utils/Favorite";
 import { UserContext } from "../App";
-import { getFestivals, getAccountData, updateFavorites, updateDiaries, addEditLogToBackend } from "../utils/apiService";
+import { getFestivals, getAccountData, updateFavorites, updateDiaries, addEditLogToBackend } from "../utils/apiService"; // getReviewsForFestival, postReview を一時的に削除
 import useApiData from '../hooks/useApiData';
 import AddToGoogleCalendarButton from "../components/AddToGoogleCalendarButton";
 import AddToICalendarButton from "../components/AddToICalendarButton";
@@ -16,6 +16,10 @@ export default function FestivalDetail() {
   // --- APIからデータを取得 ---
   const { data: festivals, loading: festivalsLoading, error: festivalsError } = useApiData(getFestivals);
   const { data: accountData, loading: accountLoading, error: accountError } = useApiData(getAccountData, [user?.id]);
+  // --- レビューデータを取得 (一時的にコメントアウト) ---
+  // const { data: reviews, loading: reviewsLoading, error: reviewsError, refetch: refetchReviews } = useApiData(() => getReviewsForFestival(id), [id]);
+  const { data: reviews, loading: reviewsLoading, error: reviewsError, refetch: refetchReviews } = { data: [], loading: false, error: null, refetch: () => {} }; // ダミーデータ
+
 
   // --- Stateの定義 ---
   const [festival, setFestival] = useState(null);
@@ -24,6 +28,11 @@ export default function FestivalDetail() {
   const [newDiary, setNewDiary] = useState("");
   const [newImage, setNewImage] = useState(null);
   const [editing, setEditing] = useState(null);
+  // --- レビュー投稿用のState (一時的にコメントアウト) ---
+  const [newReviewRating, setNewReviewRating] = useState(0); // 保持
+  const [newReviewText, setNewReviewText] = useState(""); // 保持
+  const [reviewSubmitLoading, setReviewSubmitLoading] = useState(false); // 保持
+
 
   // APIから取得したアカウントデータでStateを更新
   useEffect(() => {
@@ -68,6 +77,31 @@ export default function FestivalDetail() {
     } catch (error) {
       console.error("編集履歴の保存に失敗しました:", error);
     }
+  };
+
+  // --- レビュー投稿処理 (一時的にコメントアウト) ---
+  const handleReviewSubmit = async () => {
+    // if (newReviewRating === 0) {
+    //   alert("評価（星）を選択してください。");
+    //   return;
+    // }
+    // setReviewSubmitLoading(true);
+    // try {
+    //   // await postReview({
+    //   //   festival_id: id,
+    //   //   rating: newReviewRating,
+    //   //   comment: newReviewText,
+    //   // });
+    //   alert("レビュー機能は現在準備中です。");
+    //   // setNewReviewRating(0);
+    //   // setNewReviewText("");
+    //   // refetchReviews(); // レビューリストを再取得して更新
+    // } catch (error) {
+    //   console.error("レビューの投稿に失敗しました:", error);
+    //   alert(error.response?.data?.error || "レビューの投稿に失敗しました。既に投稿済みか、サーバーに問題がある可能性があります。");
+    // } finally {
+    //   setReviewSubmitLoading(false);
+    // }
   };
 
   // 日記保存（新規・編集共通）
@@ -139,8 +173,18 @@ export default function FestivalDetail() {
     reader.readAsDataURL(file);
   };
 
-  const isLoading = festivalsLoading || (user && accountLoading);
-  const error = festivalsError || (user && accountError);
+  // 平均評価とレビュー数を計算
+  const { averageRating, reviewCount } = React.useMemo(() => {
+    if (!reviews || reviews.length === 0) return { averageRating: 0, reviewCount: 0 };
+    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+    return {
+      averageRating: totalRating / reviews.length,
+      reviewCount: reviews.length,
+    };
+  }, [reviews]);
+
+  const isLoading = festivalsLoading || (user && accountLoading) || reviewsLoading;
+  const error = festivalsError || (user && accountError) || reviewsError;
 
   if (isLoading) return <Container><Text>読み込み中...</Text></Container>;
   if (error) return <Container><Alert color="red" title="エラー">🚨 {error.message || 'データの読み込み中にエラーが発生しました。'}</Alert></Container>;
@@ -163,6 +207,13 @@ export default function FestivalDetail() {
         </Card.Section>
 
         <Title order={2}>{festival.name}</Title>
+
+        {/* --- 平均評価 --- */}
+        <Group mt="sm">
+          <Rating value={averageRating} fractions={2} readOnly />
+          <Text c="dimmed" size="sm">({reviewCount}件のレビュー)</Text>
+        </Group>
+
 
         {/* --- お祭りの基本情報 --- */}
         <Stack mt="md">
@@ -192,6 +243,52 @@ export default function FestivalDetail() {
           />
         </Group>
       </Card>
+
+      {/* --- レビューセクション --- */}
+      <Paper shadow="xs" p="md" mt="xl" withBorder>
+        <Title order={3} mb="md">レビュー</Title>
+
+        {/* レビュー投稿フォーム (ログインユーザーのみ) */}
+        {user && (
+          <Stack mb="xl">
+            <Title order={4}>レビューを投稿する</Title>
+            <Rating value={newReviewRating} onChange={setNewReviewRating} />
+            <Textarea
+              placeholder="お祭りの感想を共有しましょう！"
+              value={newReviewText}
+              onChange={(e) => setNewReviewText(e.target.value)}
+              autosize
+              minRows={3}
+            />
+            <Button onClick={handleReviewSubmit} loading={reviewSubmitLoading} w="fit-content">投稿する</Button>
+          </Stack>
+        )}
+
+        <Divider my="md" label="みんなのレビュー" labelPosition="center" />
+
+        {/* レビュー一覧 */}
+        {reviews && reviews.length > 0 ? (
+          <List spacing="lg">
+            {reviews.map((review) => (
+              <List.Item
+                key={review.id}
+                icon={
+                  <Avatar color="blue" radius="xl">{review.username?.charAt(0).toUpperCase()}</Avatar>
+                }
+              >
+                <Group justify="space-between">
+                  <Text fw={500}>{review.username}</Text>
+                  <Rating value={review.rating} readOnly size="sm" />
+                </Group>
+                <Text c="dimmed" size="xs">{new Date(review.created_at).toLocaleString()}</Text>
+                <Text pt="sm">{review.comment}</Text>
+              </List.Item>
+            ))}
+          </List>
+        ) : (
+          <Text c="dimmed" ta="center">このお祭りにはまだレビューがありません。</Text>
+        )}
+      </Paper>
 
       <Paper shadow="xs" p="md" mt="xl" withBorder>
         <Title order={3} mb="md">日記</Title>
