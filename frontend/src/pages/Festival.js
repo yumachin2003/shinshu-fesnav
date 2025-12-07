@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Container, Title, Text, SimpleGrid, Card, SegmentedControl, Alert, Select, Group, LoadingOverlay, Box, Image, Badge, Paper, Stack } from '@mantine/core';
+import { Container, Title, Text, SimpleGrid, Card, SegmentedControl, Alert, Select, Group, LoadingOverlay, Box, Image, Badge, Paper, Stack, Grid, Button } from '@mantine/core';
 import { IconCalendar, IconMapPin } from '@tabler/icons-react';
 import { UserContext } from "../App";
 import { getFestivals, getAccountData } from '../utils/apiService'; // getAccountDataをインポート
@@ -39,6 +39,8 @@ export default function Festival() {
   // --- Stateの定義 ---
   const [viewMode, setViewMode] = useState('list'); // 'list', 'calendar', 'map', 'register'
   const [sortBy, setSortBy] = useState('default'); // 並び替え用のState
+  const [filterMonth, setFilterMonth] = useState(null); // 月フィルター用のState
+  const [filterArea, setFilterArea] = useState(null);   // エリアフィルター用のState
 
   // --- useEffectフック ---
   useEffect(() => {
@@ -53,11 +55,37 @@ export default function Festival() {
   const isLoading = festivalsLoading;
   const error = festivalsError;
 
-  // useMemoを使ってソート処理を効率化
+  // useMemoを使ってフィルターの選択肢を生成
+  const filterOptions = useMemo(() => {
+    if (!festivals) return { months: [], areas: [] };
+
+    const months = [...new Set(festivals
+        .map(f => f.date ? new Date(f.date).getMonth() + 1 : null)
+        .filter(Boolean)
+    )].sort((a, b) => a - b).map(m => ({ label: `${m}月`, value: String(m) }));
+
+    const areas = [...new Set(festivals
+        .map(f => f.location ? f.location.split(/市|町|村/)[0] + (f.location.match(/市|町|村/)?.[0] || '') : null)
+        .filter(Boolean)
+    )].sort().map(a => ({ label: a, value: a }));
+
+    return { months, areas };
+  }, [festivals]);
+
+  // useMemoを使ってフィルタリングとソート処理を効率化
   const sortedFestivals = useMemo(() => {
     if (!festivals) return [];
 
-    const festivalsCopy = [...festivals];
+    // フィルタリング処理
+    const filtered = festivals.filter(f => {
+      const monthMatch = filterMonth ? (f.date && new Date(f.date).getMonth() + 1 === parseInt(filterMonth, 10)) : true;
+      const areaMatch = filterArea ? (f.location && f.location.startsWith(filterArea)) : true;
+      return monthMatch && areaMatch;
+    });
+
+
+    // ソート処理
+    const festivalsCopy = [...filtered];
 
     switch (sortBy) {
       case 'date':
@@ -78,7 +106,7 @@ export default function Festival() {
         // デフォルト（ID順）
         return festivalsCopy.sort((a, b) => a.id - b.id);
     }
-  }, [festivals, sortBy]);
+  }, [festivals, sortBy, filterMonth, filterArea]);
 
   if (error) {
     return <Container><Alert color="red" title="エラー">🚨 {error.message || 'データの読み込み中にエラーが発生しました。'}</Alert></Container>;
@@ -150,36 +178,63 @@ export default function Festival() {
         
         <Title order={2} ta="center" mb="xl">長野県のお祭り</Title>
 
-        {/* 操作パネル (Paperで囲んで視覚的にまとめる) */}
-        <Paper shadow="xs" p="md" mb="xl" withBorder>
-          <Group justify="space-between">
-            {/* 表示モード切り替え */}
-            <SegmentedControl
-              value={viewMode}
-              onChange={setViewMode}
-              data={[
-                { label: 'リスト', value: 'list' },
-                { label: 'カレンダー', value: 'calendar' },
-                { label: '地図', value: 'map' },
-                { label: '登録', value: 'register' },
-              ]}
-            />
-            {/* 並び替え */}
-            {viewMode === 'list' && (
-              <Select
-                placeholder="並び替え"
-                value={sortBy}
-                onChange={(value) => setSortBy(value || 'default')}
-                data={[
-                  { label: 'デフォルト', value: 'default' },
-                  { label: '開催日が近い順', value: 'date' },
-                  { label: '人気順', value: 'popularity' },
-                ]}
-                style={{ width: 160 }}
-              />
-            )}
-          </Group>
-        </Paper>
+        {/* 表示モード切り替え */}
+        <Group justify="center" mb="xl">
+          <SegmentedControl
+            value={viewMode}
+            onChange={setViewMode}
+            data={[
+              { label: 'リスト', value: 'list' },
+              { label: 'カレンダー', value: 'calendar' },
+              { label: '地図', value: 'map' },
+              { label: '登録', value: 'register' },
+            ]}
+          />
+        </Group>
+
+        {/* 絞り込み・並び替えパネル (リスト表示の時だけ表示) */}
+        {viewMode === 'list' && (
+          <Paper shadow="xs" p="md" mb="xl" withBorder>
+            <Grid align="flex-end">
+              <Grid.Col span={{ base: 12, sm: 'content' }}>
+                <Select
+                  label="開催月で絞り込み"
+                  placeholder="月を選択"
+                  value={filterMonth}
+                  onChange={setFilterMonth}
+                  data={filterOptions.months}
+                  clearable
+                />
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, sm: 'content' }}>
+                <Select
+                  label="エリアで絞り込み"
+                  placeholder="エリアを選択"
+                  value={filterArea}
+                  onChange={setFilterArea}
+                  data={filterOptions.areas}
+                  clearable
+                />
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, sm: 'content' }}>
+                <Select
+                  label="並び替え"
+                  placeholder="並び替え"
+                  value={sortBy}
+                  onChange={(value) => setSortBy(value || 'default')}
+                  data={[
+                    { label: 'デフォルト', value: 'default' },
+                    { label: '開催日が近い順', value: 'date' },
+                    { label: '人気順', value: 'popularity' },
+                  ]}
+                />
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, sm: 'content' }}>
+                  <Button variant="outline" onClick={() => { setFilterMonth(null); setFilterArea(null); }}>フィルターをリセット</Button>
+              </Grid.Col>
+            </Grid>
+          </Paper>
+        )}
 
         {/* コンテンツの描画 */}
         {renderContent()}
