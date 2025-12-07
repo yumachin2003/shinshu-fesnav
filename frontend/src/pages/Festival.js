@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Container, Title, Text, SimpleGrid, Card, SegmentedControl, Alert, Select, Group, LoadingOverlay, Box, Image, Badge, Paper, Stack, Grid, Button } from '@mantine/core';
-import { IconCalendar, IconMapPin } from '@tabler/icons-react';
+import { Container, Title, Text, SimpleGrid, Card, SegmentedControl, Alert, Select, Group, LoadingOverlay, Box, Image, Badge, Paper, Stack, Grid, Button, Rating } from '@mantine/core';
+import { IconCalendar, IconMapPin, IconStar } from '@tabler/icons-react';
 import { UserContext } from "../App";
 import { getFestivals, getAccountData } from '../utils/apiService'; // getAccountDataをインポート
 import useApiData from '../hooks/useApiData'; // useApiDataフックをインポート
@@ -151,6 +151,13 @@ export default function Festival() {
                 <Group justify="space-between" mt="md" mb="xs">
                   <Title order={4} fw={500}>{f.name}</Title>
                   {new Date(f.date) > new Date() && <Badge color="pink">開催予定</Badge>}
+                </Group>
+
+                {/* --- 平均評価 --- */}
+                <Group gap="xs">
+                  {/* f.average_rating が 0 または null/undefined の場合は0を表示 */}
+                  <Rating value={f.average_rating || 0} fractions={2} readOnly />
+                  <Text size="xs" c="dimmed">({f.review_count || 0})</Text>
                 </Group>
 
                 <Stack gap="xs" mt="sm">
