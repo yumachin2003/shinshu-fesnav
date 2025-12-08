@@ -31,7 +31,7 @@ def create_app():
         SQLALCHEMY_DATABASE_URI='sqlite:///fesData.db',
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         # JWTの署名に使う秘密鍵。本番環境ではより複雑なキーに変更してください。
-        SECRET_KEY='your-very-secret-and-secure-key'
+        SECRET_KEY='your-very-secret-and-secure-key',
 
         # ★ Google OAuth 設定読み込み
         GOOGLE_CLIENT_ID=os.getenv("GOOGLE_CLIENT_ID"),
