@@ -27,18 +27,20 @@ class Festivals(db.Model):
            'description': self.description,
        }
 
+# models.py
 class User(db.Model):
-   __tablename__ = 'users'
-   id = db.Column(db.Integer, primary_key=True)
-   username = db.Column(db.String(80), unique=True, nullable=False)
-   password_hash = db.Column(db.String(128), nullable=False)
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    email = db.Column(db.String(120), unique=True, nullable=False)  # 追加
+    password = db.Column(db.String(255))  # 任意
 
-   def __init__(self, username, password):
+    def __init__(self, username, password):
        """コンストラクタ。パスワードをハッシュ化して保存する"""
        self.username = username
        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
 
-   def check_password(self, password):
+    def check_password(self, password):
        """パスワードが一致するかチェックする"""
        return bcrypt.check_password_hash(self.password_hash, password)
 
