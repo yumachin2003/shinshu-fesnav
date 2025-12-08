@@ -18,6 +18,22 @@ export default function Login() {
     initGoogleTranslate();
   }, []);
 
+  // Googleログインから戻ったとき token を受け取って処理
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+
+    if (token) {
+      // 保存
+      localStorage.setItem("authToken", token);
+
+      // ここでユーザーデータを API から取得してセットしてもOK
+      // ログイン後の遷移
+      navigate("/festivals");
+    }
+  }, [navigate]);
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -61,6 +77,26 @@ export default function Login() {
           <Button fullWidth mt="xl" type="submit" loading={loading}>ログイン</Button>
         </form>
       </Paper>
+      <Button
+        fullWidth
+        mt="md"
+        variant="outline"
+        color="gray"
+        onClick={() => {
+          const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+          const redirectUri = process.env.REACT_APP_GOOGLE_REDIRECT_URI;
+          const scope = "openid email profile";
+          const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
+          window.location.href = url;
+        }}
+      >
+        <img
+          src="https://developers.google.com/identity/images/g-logo.png"
+          alt="Google Logo"
+          style={{ width: 20, height: 20, marginRight: 10 }}
+        />
+        Googleでログイン
+      </Button>
       <Text c="dimmed" size="sm" ta="center" mt={5}>
         アカウントをお持ちでないですか？{' '}
         <Anchor size="sm" component={Link} to="/register">新規登録</Anchor>

@@ -26,38 +26,55 @@ export default function useDiary({ user, festival, diaries, setDiaries }) {
   };
 
   // 日記保存
-  const handleSaveDiary = async () => {
-    const text = newDiary.trim();
-    if (!text && !newImage) return;
+const handleSaveDiary = async () => {
+  // ★★★ ログインチェック（OK/キャンセル付き） ★★★
+  if (!user) {
+    const goLogin = window.confirm(
+      "この機能はログインすると使えます。\nログインページに移動しますか？"
+    );
 
-    const updated = { ...diaries };
-    const now = new Date().toLocaleString();
-
-    if (editing) {
-      updated[festival.id] = updated[festival.id].map((d) =>
-        d.timestamp === editing.timestamp
-          ? { ...d, text, image: newImage ?? d.image, date: now }
-          : d
-      );
-      await logEditAction(`日記を編集: ${text}`);
-      setEditing(null);
-    } else {
-      const newEntry = {
-        text,
-        image: newImage,
-        timestamp: Date.now(),
-        date: now,
-      };
-      updated[festival.id] = [...(updated[festival.id] || []), newEntry];
-      await logEditAction(`新しい日記を投稿: ${text}`);
+    // OK → ログインページへ
+    if (goLogin) {
+      window.location.href = "/login";
     }
 
-    setDiaries(updated);
-    await updateDiaries(updated);
+    // キャンセル → 現在のページに残る
+    return;
+  }
 
-    setNewDiary("");
-    setNewImage(null);
-  };
+  // ★★ text を定義（←これが必須！） ★★
+  const text = newDiary.trim();
+  if (!text && !newImage) return;
+
+  const updated = { ...diaries };
+  const now = new Date().toLocaleString();
+
+  if (editing) {
+    updated[festival.id] = updated[festival.id].map((d) =>
+      d.timestamp === editing.timestamp
+        ? { ...d, text, image: newImage ?? d.image, date: now }
+        : d
+    );
+    await logEditAction(`日記を編集: ${text}`);
+    setEditing(null);
+  } else {
+    const newEntry = {
+      text,
+      image: newImage,
+      timestamp: Date.now(),
+      date: now,
+    };
+    updated[festival.id] = [...(updated[festival.id] || []), newEntry];
+    await logEditAction(`新しい日記を投稿: ${text}`);
+  }
+
+  setDiaries(updated);
+  await updateDiaries(updated);
+
+  setNewDiary("");
+  setNewImage(null);
+};
+
 
   // 編集開始
   const handleEditDiary = (entry) => {
