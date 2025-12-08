@@ -4,6 +4,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
+from dotenv import load_dotenv
+
+load_dotenv()   # ← 追加
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -29,7 +32,13 @@ def create_app():
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         # JWTの署名に使う秘密鍵。本番環境ではより複雑なキーに変更してください。
         SECRET_KEY='your-very-secret-and-secure-key'
+
+        # ★ Google OAuth 設定読み込み
+        GOOGLE_CLIENT_ID=os.getenv("GOOGLE_CLIENT_ID"),
+        GOOGLE_CLIENT_SECRET=os.getenv("GOOGLE_CLIENT_SECRET"),
+        GOOGLE_REDIRECT_URI=os.getenv("GOOGLE_REDIRECT_URI"),
     )
+    
 
     # --- Extensions Init ---
     db.init_app(app)

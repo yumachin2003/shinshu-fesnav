@@ -1,14 +1,35 @@
-from flask import Blueprint, request, jsonify, current_app, g
+from flask import Blueprint, request, jsonify, current_app, g, session, redirect
 from .models import Festivals, User, UserFavorite, UserDiary, EditLog
-from datetime import datetime, timedelta
+import datetime
 from . import db
 from .utils import calculate_concrete_date # 日付計算ユーティリティをインポート
 import jwt as pyjwt
-import datetime
 from functools import wraps
+import requests
+import os
+from urllib.parse import urlencode
+
+print("GOOGLE_CLIENT_ID:", os.getenv("REACT_APP_GOOGLE_CLIENT_ID"))
+print("GOOGLE_CLIENT_SECRET:", os.getenv("REACT_APP_GOOGLE_CLIENT_SECRET"))
+print("GOOGLE_REDIRECT_URI:", os.getenv("REACT_APP_GOOGLE_REDIRECT_URI"))
+
+os.environ["REACT_APP_GOOGLE_CLIENT_ID"] = "355591951102-jj1iulnb41pp6fluosu6o1eq6hug58pn.apps.googleusercontent.com"
+os.environ["REACT_APP_GOOGLE_CLIENT_SECRET"] = "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"
+os.environ["REACT_APP_GOOGLE_REDIRECT_URI"] = "http://localhost:5000/api/auth/google/callback"
+os.environ["FRONTEND_URL"] = "http://localhost:3000"
+os.environ["SECRET_KEY"] = "54ea1ee066b6fdb44004bd55a6ea41825ffa8637d2053b9d4293698a60d8bb36"
 
 # 'api'という名前でBlueprintを作成
 api_bp = Blueprint('api', __name__, url_prefix='/api')
+
+GOOGLE_CLIENT_ID = os.getenv("REACT_APP_GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("REACT_APP_GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = os.getenv("REACT_APP_GOOGLE_REDIRECT_URI")
+
+# デバッグ用
+print("GOOGLE_CLIENT_ID:", GOOGLE_CLIENT_ID)
+print("GOOGLE_CLIENT_SECRET:", GOOGLE_CLIENT_SECRET)
+print("GOOGLE_REDIRECT_URI:", GOOGLE_REDIRECT_URI)
 
 # --- 認証デコレータ ---
 def token_required(f):
@@ -286,3 +307,69 @@ def add_edit_log():
     db.session.add(new_log)
     db.session.commit()
     return jsonify(new_log.to_dict()), 201
+
+# Googleログイン機能
+@api_bp.route("/auth/google")
+def google_login():
+    params = {
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "consent"
+    }
+    url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
+    return redirect(url)
+
+@api_bp.route("/auth/google/callback")
+def google_callback():
+    code = request.args.get("code")
+
+    # 1. トークン取得
+    token_url = "https://oauth2.googleapis.com/token"
+    data = {
+        "code": code,
+        "client_id": GOOGLE_CLIENT_ID,
+        "client_secret": GOOGLE_CLIENT_SECRET,
+        "redirect_uri": GOOGLE_REDIRECT_URI,
+        "grant_type": "authorization_code",
+    }
+    token_res = requests.post(token_url, data=data).json()
+    print("token_res:", token_res)  # ← ここを追加
+    id_token = token_res.get("id_token")
+    print("id_token:", id_token)    # ← None になっていないか確認
+
+
+    # 2. ID トークンの decode（Google 公式）
+    from google.oauth2.id_token import verify_oauth2_token
+    from google.auth.transport import requests as grequests
+
+    try:
+        info = verify_oauth2_token(id_token, grequests.Request(), GOOGLE_CLIENT_ID)
+    except Exception as e:
+        return jsonify({"error": "Invalid token"}), 400
+
+    email = info.get("email")
+    name = info.get("name")
+    picture = info.get("picture")
+
+    # 3. DB にユーザー登録 or 既存ユーザー取得
+    from .models import User, db
+
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        user = User(email=email, name=name, password=None)  # パスワードなし
+        db.session.add(user)
+        db.session.commit()
+
+    # 4. JWT を生成してフロントに返す
+    token = pyjwt.encode(
+        {"user_id": user.id, "email": user.email},
+        current_app.config["SECRET_KEY"],
+        algorithm="HS256",
+    )
+
+
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    return redirect(f"{FRONTEND_URL}/login?token={token}")
