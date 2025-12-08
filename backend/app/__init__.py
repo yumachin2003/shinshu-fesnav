@@ -1,37 +1,41 @@
+import os
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
+from dotenv import load_dotenv
 
+load_dotenv()   # ← 追加
 
 db = SQLAlchemy()
 migrate = Migrate()
 bcrypt = Bcrypt()
 
 def create_app():
-    """Application-factory function"""
     app = Flask(__name__, instance_relative_config=True)
 
-    # 設定の読み込み
     app.config.from_mapping(
         SQLALCHEMY_DATABASE_URI='sqlite:///fesData.db',
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
-        # JWTの署名に使う秘密鍵。本番環境ではより複雑なキーに変更してください。
-        SECRET_KEY='your-very-secret-and-secure-key'
+        SECRET_KEY=os.getenv("SECRET_KEY", "your-very-secret-and-secure-key"),
+
+        # ★ Google OAuth 設定読み込み
+        GOOGLE_CLIENT_ID=os.getenv("GOOGLE_CLIENT_ID"),
+        GOOGLE_CLIENT_SECRET=os.getenv("GOOGLE_CLIENT_SECRET"),
+        GOOGLE_REDIRECT_URI=os.getenv("GOOGLE_REDIRECT_URI"),
     )
 
-    # 拡張機能の初期化
     db.init_app(app)
     migrate.init_app(app, db)
     bcrypt.init_app(app)
-    # flask-corsを初期化し、アプリケーション全体に適用
+
     CORS(
         app,
         resources={r"/api/*": {"origins": "http://localhost:3000"}},
         supports_credentials=True,
-        allow_headers=["Content-Type", "Authorization"], # Authorizationヘッダーを許可
-        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"] # OPTIONSメソッドを許可
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     )
 
     with app.app_context():

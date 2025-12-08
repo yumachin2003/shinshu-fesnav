@@ -45,9 +45,18 @@ export const updateFavorites = (favorites) => {
   return apiClient.post('/account/favorites', { favorites });
 };
 
-export const updateDiaries = (diaries) => {
-  return apiClient.post('/account/diaries', { diaries });
-};
+export async function updateDiaries(diaries) {
+  try {
+    const res = await apiClient.post("/account/diaries", { diaries });
+    return res.data;
+  } catch (err) {
+    if (err.response && err.response.status === 401) {
+      alert("ログインしてください");
+      window.location.href = "/login";
+    }
+    throw err;
+  }
+}
 
 // Auth API
 export const loginUser = (credentials) => {
