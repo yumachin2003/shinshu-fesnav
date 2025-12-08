@@ -15,9 +15,13 @@ def create_app():
     is_production = os.getenv('FLASK_ENV') != 'development'
     
     # 本番環境ではReactのビルドフォルダを静的フォルダとして指定
-    static_folder_config = {'static_folder': '../../frontend/build'} if is_production else {}
+    app_kwargs = {
+        'instance_relative_config': True,
+    }
+    if is_production:
+        app_kwargs['static_folder'] = '../../frontend/build'
 
-    app = Flask(__name__, instance_relative_config=True, **static_folder_config)
+    app = Flask(__name__, **app_kwargs)
 
     # --- Basic Config ---
     app.config.from_mapping(
