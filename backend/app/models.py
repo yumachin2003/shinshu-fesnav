@@ -27,20 +27,18 @@ class Festivals(db.Model):
            'description': self.description,
        }
 
-# models.py
 class User(db.Model):
-    __tablename__ = 'users'
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
-    email = db.Column(db.String(120), unique=True, nullable=False)  # 追加
-    password = db.Column(db.String(255))  # 任意
+   __tablename__ = 'users'
+   id = db.Column(db.Integer, primary_key=True)
+   username = db.Column(db.String(80), unique=True, nullable=False)
+   password_hash = db.Column(db.String(128), nullable=False)
 
-    def __init__(self, username, password):
+   def __init__(self, username, password):
        """コンストラクタ。パスワードをハッシュ化して保存する"""
        self.username = username
        self.password_hash = bcrypt.generate_password_hash(password).decode('utf-8')
 
-    def check_password(self, password):
+   def check_password(self, password):
        """パスワードが一致するかチェックする"""
        return bcrypt.check_password_hash(self.password_hash, password)
 
@@ -107,4 +105,28 @@ class EditLog(db.Model):
             'festival_name': self.festival_name,
             'content': self.content,
             'date': self.date.isoformat() # ISO形式で返す
+        }
+
+# お祭りのレビュー
+class Review(db.Model):
+    __tablename__ = 'reviews'
+    id = db.Column(db.Integer, primary_key=True)
+    festival_id = db.Column(db.Integer, db.ForeignKey('festivals.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)
+    comment = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('reviews', lazy=True))
+    festival = db.relationship('Festivals', backref=db.backref('reviews', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'festival_id': self.festival_id,
+            'user_id': self.user_id,
+            'username': self.user.username, # ユーザー名を追加
+            'rating': self.rating,
+            'comment': self.comment,
+            'created_at': self.created_at.isoformat()
         }
