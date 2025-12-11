@@ -3,13 +3,14 @@ import { useParams, Link } from "react-router-dom";
 import {
   Container,
   Card,
+  Image, // Image をインポート
   Title,
   Text,
   Group,
   Button,
   Alert,
   Paper,
-  Stack, AspectRatio, Rating, List, Avatar, Divider,
+  Stack, AspectRatio, Rating, List, Avatar, Divider, Textarea, // Textarea をインポート
 } from "@mantine/core";
 import { IconCalendar, IconMapPin, IconRoad, IconUsers } from '@tabler/icons-react';
 import Favorite from "../utils/Favorite";
@@ -18,7 +19,9 @@ import {
   getFestivals,
   getAccountData,
   updateFavorites,
-} from "../utils/apiService"; // getReviewsForFestival, postReview を一時的に削除
+  getReviewsForFestival, // インポート
+  postReview,            // インポート
+} from "../utils/apiService";
 
 import useApiData from "../hooks/useApiData";
 import AddToGoogleCalendarButton from "../components/AddToGoogleCalendarButton";
@@ -44,10 +47,39 @@ export default function FestivalDetail() {
     error: accountError,
   } = useApiData(getAccountData, [user?.id]);
 
+  // ★ レビューAPIデータ
+  const {
+    data: reviews,
+    loading: reviewsLoading,
+    error: reviewsError,
+    setData: setReviews, // レビュー投稿後にデータを更新するため
+  } = useApiData(() => getReviewsForFestival(id), [id]);
+
   // 状態
   const [festival, setFestival] = useState(null);
   const [favorites, setFavorites] = useState({});
   const [diaries, setDiaries] = useState({});
+
+  // ★ レビュー投稿フォームの状態
+  const [newReviewText, setNewReviewText] = useState("");
+  const [newReviewRating, setNewReviewRating] = useState(0);
+  const [reviewSubmitLoading, setReviewSubmitLoading] = useState(false);
+
+  // ★ レビュー投稿処理
+  const handleReviewSubmit = async () => {
+    setReviewSubmitLoading(true);
+    try {
+      const newReview = await postReview(id, { comment: newReviewText, rating: newReviewRating });
+      setReviews([newReview, ...reviews]); // 新しいレビューをリストの先頭に追加
+      setNewReviewText("");
+      setNewReviewRating(0);
+    } catch (err) {
+      console.error("レビュー投稿エラー:", err);
+      alert("レビューの投稿に失敗しました。");
+    } finally {
+      setReviewSubmitLoading(false);
+    }
+  };
 
   // ★ 日記ロジック（コンポーネント化後）
   const diary = useDiary({
@@ -82,7 +114,7 @@ export default function FestivalDetail() {
   // ローディング & エラー処理
   // 平均評価とレビュー数を計算
   const { averageRating, reviewCount } = React.useMemo(() => {
-    if (!reviews || reviews.length === 0) return { averageRating: 0, reviewCount: 0 };
+    if (!reviews || reviews.length === 0) return { averageRating: 0, reviewCount: 0 }; // 'reviews' is now defined
     const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
     return {
       averageRating: totalRating / reviews.length,
@@ -90,7 +122,7 @@ export default function FestivalDetail() {
     };
   }, [reviews]);
 
-  const isLoading = festivalsLoading || (user && accountLoading) || reviewsLoading;
+  const isLoading = festivalsLoading || (user && accountLoading) || reviewsLoading; // 'reviewsLoading' is now defined
   const error = festivalsError || (user && accountError) || reviewsError;
 
   if (isLoading)
@@ -191,7 +223,7 @@ export default function FestivalDetail() {
         {user && (
           <Stack mb="xl">
             <Title order={4}>レビューを投稿する</Title>
-            <Rating value={newReviewRating} onChange={setNewReviewRating} />
+            <Rating value={newReviewRating} onChange={setNewReviewRating} /> 
             <Textarea
               placeholder="お祭りの感想を共有しましょう！"
               value={newReviewText}
@@ -199,7 +231,7 @@ export default function FestivalDetail() {
               autosize
               minRows={3}
             />
-            <Button onClick={handleReviewSubmit} loading={reviewSubmitLoading} w="fit-content">投稿する</Button>
+            <Button onClick={handleReviewSubmit} loading={reviewSubmitLoading} w="fit-content">投稿する</Button> 
           </Stack>
         )}
 
