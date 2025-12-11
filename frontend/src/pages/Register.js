@@ -57,7 +57,7 @@ export default function Register() {
       </Paper>
       <Text c="dimmed" size="sm" ta="center" mt={5}>
         すでにアカウントをお持ちですか？{' '}
-        <Anchor size="sm" component={Link} to="/">ログイン</Anchor>
+        <Anchor size="sm" component={Link} to="/login">ログイン</Anchor>
       </Text>
     </Container>
   );
