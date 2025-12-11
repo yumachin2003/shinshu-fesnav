@@ -30,29 +30,6 @@ h1, h2 {
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-button {
-  background-color: #4CAF50;
-  border: none;
-  color: white;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-top: 8px;
-}
-
-button:hover {
-  background-color: #45a049;
-}
-
-input[type="text"],
-input[type="password"] {
-  width: 80%;
-  padding: 10px;
-  margin: 8px 0;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-}
-
 form {
   margin-top: 10px;
 }
@@ -66,6 +43,8 @@ ul {
   list-style: none;
   padding: 0;
 }
+
+
 
 /* テーブルスタイル */
 table {
