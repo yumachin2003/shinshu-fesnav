@@ -36,23 +36,25 @@ def google_callback():
     ).json()
 
     email = userinfo["email"]
+    name = userinfo.get("name")  # ← ★ 追加（Googleの表示名）
 
     # ③ ユーザー作成 or 取得
+    userinfo = requests.get(
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        headers={"Authorization": f"Bearer {access_token}"},
+    ).json()
+
+    email = userinfo["email"]
+    name = userinfo.get("name")  # ← Googleの表示名
+
     user = User.query.filter_by(username=email).first()
     if not user:
-        user = User(username=email, password="google-login")
+        user = User(
+            username=email,
+            display_name=name,
+        )
         db.session.add(user)
+    else:
+        # 既存ユーザーでも更新しておく
+        user.display_name = name
         db.session.commit()
-
-    # ④ JWT 発行
-    jwt_token = jwt.encode(
-        {
-            "user_id": user.id,
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=24),
-        },
-        current_app.config["SECRET_KEY"],
-        algorithm="HS256",
-    )
-
-    # ⑤ フロントへ token を渡す
-    return redirect(f"http://localhost:3000/login?token={jwt_token}")
