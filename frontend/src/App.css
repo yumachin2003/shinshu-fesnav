@@ -103,25 +103,3 @@ th {
   transform: translateY(-5px);
   box-shadow: var(--mantine-shadow-lg);
 }
-
-/* ダークモード対応 */
-@media (prefers-color-scheme: dark) {
-  body {
-    background: #121212;
-    color: #ffffff;
-  }
-
-  h1, h2 {
-    color: #f0f0f0;
-  }
-
-  .card {
-    background: #1e1e1e;
-    color: #ffffff;
-  }
-
-  th {
-    background-color: #333;
-    color: #ffffff;
-  }
-}
