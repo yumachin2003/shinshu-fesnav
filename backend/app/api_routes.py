@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app, g
-from .models import Festivals, User, UserFavorite, UserDiary, EditLog
+from .models import Festivals, User, UserFavorite, UserDiary, EditLog, Review
 from datetime import datetime, timedelta
 from . import db
 from .utils import calculate_concrete_date # 日付計算ユーティリティをインポート
@@ -113,6 +113,34 @@ def add_festival():
     db.session.add(new_festival)
     db.session.commit()
     return jsonify(new_festival.to_dict()), 201
+
+# --- Review API ---
+
+# GET /api/festivals/<festival_id>/reviews : 特定のお祭りのレビューを取得
+@api_bp.route('/festivals/<int:festival_id>/reviews', methods=['GET'])
+def get_reviews_for_festival(festival_id):
+    reviews = Review.query.filter_by(festival_id=festival_id).order_by(Review.created_at.desc()).all()
+    return jsonify([review.to_dict() for review in reviews]), 200
+
+# POST /api/festivals/<festival_id>/reviews : 新しいレビューを投稿
+@api_bp.route('/festivals/<int:festival_id>/reviews', methods=['POST'])
+@token_required
+def post_review(festival_id):
+    data = request.get_json()
+    if not data or 'rating' not in data or 'comment' not in data:
+        return jsonify({'error': 'Rating and comment are required'}), 400
+
+    new_review = Review(
+        festival_id=festival_id,
+        user_id=g.current_user.id,
+        rating=data['rating'],
+        comment=data['comment']
+    )
+    db.session.add(new_review)
+    db.session.commit()
+
+    return jsonify(new_review.to_dict()), 201
+
 
 # --- Auth API ---
 

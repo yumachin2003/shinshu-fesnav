@@ -106,3 +106,27 @@ class EditLog(db.Model):
             'content': self.content,
             'date': self.date.isoformat() # ISO形式で返す
         }
+
+# お祭りのレビュー
+class Review(db.Model):
+    __tablename__ = 'reviews'
+    id = db.Column(db.Integer, primary_key=True)
+    festival_id = db.Column(db.Integer, db.ForeignKey('festivals.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    rating = db.Column(db.Integer, nullable=False)
+    comment = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('reviews', lazy=True))
+    festival = db.relationship('Festivals', backref=db.backref('reviews', lazy=True))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'festival_id': self.festival_id,
+            'user_id': self.user_id,
+            'username': self.user.username, # ユーザー名を追加
+            'rating': self.rating,
+            'comment': self.comment,
+            'created_at': self.created_at.isoformat()
+        }
