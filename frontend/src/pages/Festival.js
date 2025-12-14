@@ -109,6 +109,20 @@ export default function Festival() {
     }
   }, [festivals, sortBy, filterMonth, filterArea]);
 
+  // SegmentedControlのデータをuseMemoでメモ化
+  const segmentData = useMemo(() => {
+    const baseData = [
+      { label: 'リスト', value: 'list' },
+      { label: 'カレンダー', value: 'calendar' },
+      { label: '地図', value: 'map' },
+    ];
+    // rootユーザーの場合のみ「登録」タブを追加
+    if (user && user.username === 'root') {
+      baseData.push({ label: '登録', value: 'register' });
+    }
+    return baseData;
+  }, [user]); // userの状態が変わったときに再計算
+
   if (error) {
     return <Container><Alert color="red" title="エラー">🚨 {error.message || 'データの読み込み中にエラーが発生しました。'}</Alert></Container>;
   }
@@ -189,12 +203,7 @@ export default function Festival() {
           <SegmentedControl
             value={viewMode}
             onChange={setViewMode}
-            data={[
-              { label: 'リスト', value: 'list' },
-              { label: 'カレンダー', value: 'calendar' },
-              { label: '地図', value: 'map' },
-              { label: '登録', value: 'register' },
-            ]}
+            data={segmentData}
           />
         </Group>
 
