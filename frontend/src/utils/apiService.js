@@ -13,7 +13,7 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // localStorageから認証トークンを取得します。トークンのキー名は実際のキーに合わせてください。
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken'); // Login.jsでの保存キー 'authToken' に合わせる
     // トークンが存在する場合、リクエストヘッダーにAuthorization情報を追加します。
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -36,6 +36,18 @@ export const createFestival = (festival) => {
   return apiClient.post('/festivals', { name, date, location });
 };
 
+// Review API
+export const getReviewsForFestival = (festivalId) => {
+  return apiClient.get(`/festivals/${festivalId}/reviews`);
+};
+
+export const postReview = async (festivalId, reviewData) => {
+  // FestivalDetail.js でレスポンスデータ本体を直接扱えるように、
+  // async/await を使って response.data を返す
+  const response = await apiClient.post(`/festivals/${festivalId}/reviews`, reviewData);
+  return response.data;
+};
+
 // Account API
 export const getAccountData = () => {
   return apiClient.get('/account/data');
@@ -45,9 +57,18 @@ export const updateFavorites = (favorites) => {
   return apiClient.post('/account/favorites', { favorites });
 };
 
-export const updateDiaries = (diaries) => {
-  return apiClient.post('/account/diaries', { diaries });
-};
+export async function updateDiaries(diaries) {
+  try {
+    const res = await apiClient.post("/account/diaries", { diaries });
+    return res.data;
+  } catch (err) {
+    if (err.response && err.response.status === 401) {
+      alert("ログインしてください");
+      window.location.href = "/login";
+    }
+    throw err;
+  }
+}
 
 // Auth API
 export const loginUser = (credentials) => {

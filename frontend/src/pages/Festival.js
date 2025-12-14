@@ -27,14 +27,15 @@ export default function Festival() {
 
   // 未ログインチェック機能
   const requireLogin = () => {
-  if (!user) {
-    alert("この機能を使うにはログインしてください");
-    navigate("/login");
-    return false;
-  }
-  return true;
-};
-
+    if (!user) {
+      const confirmed = window.confirm("この機能を使うにはログインが必要です。\nログインページへ移動しますか？");
+      if (confirmed) {
+        navigate("/login");
+      }
+      return false;  // ← ログインしてないので、処理は中断
+    }
+    return true; // ログイン済み
+  };
 
   // --- Stateの定義 ---
   const [viewMode, setViewMode] = useState('list'); // 'list', 'calendar', 'map', 'register'
