@@ -57,9 +57,12 @@ def create_app():
         )
 
     with app.app_context():
-        # --- Blueprint Registration ---
         from . import api_routes
+        from . import auth_routes   # ← 追加
+
         app.register_blueprint(api_routes.api_bp)
+        app.register_blueprint(auth_routes.auth_bp, url_prefix="/api/auth")
+
 
         if is_production:
             # == Production Mode (1 Port) ==
