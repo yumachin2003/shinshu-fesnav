@@ -2,6 +2,7 @@ import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { Link } from 'react-router-dom'; // Linkをインポートして詳細ページへのリンクを追加
 import { Text } from '@mantine/core';
+import L from 'leaflet';
 
 const containerStyle = {
   height: '600px',
@@ -12,6 +13,16 @@ const containerStyle = {
 
 // 地図の中心を長野県長野市付近に設定
 const center = [36.64917, 138.19500]; // Leafletは [lat, lng] の配列形式
+
+// カスタムアイコンの設定（例：赤いマーカー）
+const festivalIcon = new L.Icon({
+  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41]
+});
 
 function FestivalMap({ festivals = [] }) {
   const validFestivals = festivals.filter(f => f.latitude && f.longitude);
@@ -27,7 +38,7 @@ function FestivalMap({ festivals = [] }) {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           {validFestivals.map(festival => (
-            <Marker key={festival.id} position={[festival.latitude, festival.longitude]}>
+            <Marker key={festival.id} position={[festival.latitude, festival.longitude]} icon={festivalIcon}>
               <Popup>
                 <Text fw={700}>{festival.name}</Text>
                 <Text size="sm">{festival.location}</Text>
