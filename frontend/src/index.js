@@ -6,6 +6,8 @@ import reportWebVitals from './reportWebVitals';
 
 // MantineのCSSをインポート
 import '@mantine/core/styles.css';
+// LeafletのCSSをインポート
+import 'leaflet/dist/leaflet.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
