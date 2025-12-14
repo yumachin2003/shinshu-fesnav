@@ -4,7 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid'; // 週表示用プラグイン
 import listPlugin from '@fullcalendar/list';       // リスト表示用プラグイン
 import interactionPlugin from '@fullcalendar/interaction';
-import { Modal, Title, Text, Group, Button, Stack, Paper, Box } from '@mantine/core';
+import { Modal, Title, Text, Group, Button, Stack, Paper, Box, List } from '@mantine/core';
 import { Link } from 'react-router-dom';
 import { IconCalendar, IconMapPin } from '@tabler/icons-react';
 
@@ -13,6 +13,8 @@ import './FestivalCalendar.css';
 
 export default function FestivalCalendar({ festivals }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [currentMonthEvents, setCurrentMonthEvents] = useState([]);
+  const [listTitle, setListTitle] = useState('');
 
   // お祭りデータをFullCalendarが要求する形式に変換
   const events = festivals.map(festival => {
@@ -60,6 +62,23 @@ export default function FestivalCalendar({ festivals }) {
     info.el.title = `${info.event.title}\n場所: ${info.event.extendedProps.location || '未定'}`;
   };
 
+  // カレンダーの表示範囲が変更されたときにイベントリストを更新
+  const handleDatesSet = (dateInfo) => {
+    const currentMonth = dateInfo.view.currentStart.getMonth();
+    const currentYear = dateInfo.view.currentStart.getFullYear();
+
+    setListTitle(`${currentYear}年${currentMonth + 1}月のイベント`);
+
+    const filteredEvents = events
+      .filter(event => {
+        const eventDate = new Date(event.start);
+        return eventDate.getFullYear() === currentYear && eventDate.getMonth() === currentMonth;
+      })
+      .sort((a, b) => new Date(a.start) - new Date(b.start)); // 日付順にソート
+
+    setCurrentMonthEvents(filteredEvents);
+  };
+
   return (
     <>
       {/* カレンダーの凡例（色の説明） */}
@@ -91,6 +110,7 @@ export default function FestivalCalendar({ festivals }) {
         events={events}
         eventClick={handleEventClick}
         eventMouseEnter={handleEventMouseEnter} // ホバー時の処理を追加
+        datesSet={handleDatesSet}
         locale="ja" // 日本語化
         buttonText={{
           today: '今日',
@@ -131,6 +151,27 @@ export default function FestivalCalendar({ festivals }) {
           </Stack>
         )}
       </Modal>
+
+      {/* 今月のイベント一覧 */}
+      <Paper shadow="xs" p="lg" mt="xl" withBorder>
+        <Title order={3} mb="md">{listTitle || '今月のイベント一覧'}</Title>
+        {currentMonthEvents.length > 0 ? (
+          <List spacing="sm">
+            {currentMonthEvents.map(event => (
+              <List.Item key={`list-${event.id}`}>
+                <Group>
+                  <Text w={100}>{new Date(event.start).toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })}</Text>
+                  <Link to={`/festivals/${event.id}`} style={{ textDecoration: 'none' }}>
+                    <Text c="blue" component="span">{event.title}</Text>
+                  </Link>
+                </Group>
+              </List.Item>
+            ))}
+          </List>
+        ) : (
+          <Text c="dimmed">この月のイベントはありません。</Text>
+        )}
+      </Paper>
     </>
   );
 }
