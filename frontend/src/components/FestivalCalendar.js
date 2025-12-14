@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
+import timeGridPlugin from '@fullcalendar/timegrid'; // 週表示用プラグイン
+import listPlugin from '@fullcalendar/list';       // リスト表示用プラグイン
 import interactionPlugin from '@fullcalendar/interaction';
 import { Modal, Title, Text, Group, Button, Stack } from '@mantine/core';
 import { Link } from 'react-router-dom';
@@ -13,14 +15,30 @@ export default function FestivalCalendar({ festivals }) {
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   // お祭りデータをFullCalendarが要求する形式に変換
-  const events = festivals.map(festival => ({
-    id: festival.id,
-    title: festival.name,
-    start: festival.date,
-    extendedProps: {
-      location: festival.location,
+  const events = festivals.map(festival => {
+    // 日付の比較用に今日の0時0分0秒のDateオブジェクトを生成
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const festivalDate = new Date(festival.date);
+    festivalDate.setHours(0, 0, 0, 0);
+
+    let eventColor = '#339AF0'; // デフォルトの色 (青: 開催予定)
+    if (festivalDate < today) {
+      eventColor = 'gray'; // 開催済み
+    } else if (festivalDate.getTime() === today.getTime()) {
+      eventColor = '#FA5252'; // 今日開催 (赤)
     }
-  }));
+
+    return {
+      id: festival.id,
+      title: festival.name,
+      start: festival.date,
+      extendedProps: {
+        location: festival.location,
+      },
+      color: eventColor, // イベントの色を設定
+    };
+  });
 
   // カレンダー上のイベントがクリックされたときの処理
   const handleEventClick = (clickInfo) => {
@@ -40,12 +58,12 @@ export default function FestivalCalendar({ festivals }) {
   return (
     <>
       <FullCalendar
-        plugins={[dayGridPlugin, interactionPlugin]}
+        plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
         initialView="dayGridMonth"
         headerToolbar={{
           left: 'prev,next today',
           center: 'title',
-          right: 'dayGridMonth' // 週表示は一旦シンプルにするため削除
+          right: 'dayGridMonth,timeGridWeek,listWeek' // 表示形式の切り替えボタン
         }}
         events={events}
         eventClick={handleEventClick}
@@ -53,6 +71,8 @@ export default function FestivalCalendar({ festivals }) {
         buttonText={{
           today: '今日',
           month: '月',
+          week: '週',
+          list: 'リスト',
         }}
         height="auto" // コンテナの高さに合わせる
         contentHeight="auto"
