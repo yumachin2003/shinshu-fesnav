@@ -1,7 +1,7 @@
 // 必要なモジュールやコンポーネントのインポート
 import React, { useState, useEffect } from "react";
 import { AppShell, Group, Title, Button, MantineProvider, ActionIcon } from '@mantine/core';
-import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Link, Navigate } from "react-router-dom";
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSun, IconMoonStars } from '@tabler/icons-react';
 import Login from "./pages/Login";
@@ -74,8 +74,17 @@ export default function App() {
                 <Title order={1} size="h3">信州おまつりナビ</Title>
                 <Group>
                   <Button component={Link} to="/festivals" variant="subtle">お祭り</Button>
-                  <Button component={Link} to="/items" variant="subtle">アイテム管理</Button>
-                  <Button component={Link} to="/account" variant="subtle">アカウント</Button>
+                  {user ? (
+                    <>
+                      <Button component={Link} to="/items" variant="subtle">アイテム管理</Button>
+                      <Button component={Link} to="/account" variant="subtle">アカウント</Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button component={Link} to="/login" variant="subtle">ログイン</Button>
+                      <Button component={Link} to="/register" variant="subtle">新規登録</Button>
+                    </>
+                  )}
                   {/* --- ダークモード切り替えボタン --- */}
                   <ActionIcon
                     onClick={toggleColorScheme}
@@ -93,12 +102,12 @@ export default function App() {
               {/* ルーティング設定 */}
               <Routes>
                 <Route path="/" element={<Festival />} />
-              <Route path="/login" element={<Login />} />
+                <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/festivals" element={<Festival />} /> {/* お祭り一覧ページ */}
                 <Route path="/festivals/:id" element={<FestivalDetail />} /> {/* お祭り詳細ページ */}
-                <Route path="/items" element={<ItemManagement />} /> {/* 新しいページのルートを追加 */}
-                <Route path="/account" element={<Account />} />
+                <Route path="/items" element={user ? <ItemManagement /> : <Navigate to="/login" />} />
+                <Route path="/account" element={user ? <Account /> : <Navigate to="/login" />} />
               </Routes>
             </AppShell.Main>
           </AppShell>
