@@ -4,7 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid'; // 週表示用プラグイン
 import listPlugin from '@fullcalendar/list';       // リスト表示用プラグイン
 import interactionPlugin from '@fullcalendar/interaction';
-import { Modal, Title, Text, Group, Button, Stack } from '@mantine/core';
+import { Modal, Title, Text, Group, Button, Stack, Paper, Box } from '@mantine/core';
 import { Link } from 'react-router-dom';
 import { IconCalendar, IconMapPin } from '@tabler/icons-react';
 
@@ -55,8 +55,31 @@ export default function FestivalCalendar({ festivals }) {
     setSelectedEvent(null);
   };
 
+  // マウスホバー時にツールチップを表示
+  const handleEventMouseEnter = (info) => {
+    info.el.title = `${info.event.title}\n場所: ${info.event.extendedProps.location || '未定'}`;
+  };
+
   return (
     <>
+      {/* カレンダーの凡例（色の説明） */}
+      <Paper shadow="xs" p="sm" mb="md" withBorder>
+        <Group justify="center" gap="xl">
+          <Group gap="xs">
+            <Box w={12} h={12} bg="#FA5252" style={{ borderRadius: '50%' }} />
+            <Text size="sm">今日開催</Text>
+          </Group>
+          <Group gap="xs">
+            <Box w={12} h={12} bg="#339AF0" style={{ borderRadius: '50%' }} />
+            <Text size="sm">開催予定</Text>
+          </Group>
+          <Group gap="xs">
+            <Box w={12} h={12} bg="gray" style={{ borderRadius: '50%' }} />
+            <Text size="sm">終了</Text>
+          </Group>
+        </Group>
+      </Paper>
+
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
         initialView="dayGridMonth"
@@ -67,6 +90,7 @@ export default function FestivalCalendar({ festivals }) {
         }}
         events={events}
         eventClick={handleEventClick}
+        eventMouseEnter={handleEventMouseEnter} // ホバー時の処理を追加
         locale="ja" // 日本語化
         buttonText={{
           today: '今日',
