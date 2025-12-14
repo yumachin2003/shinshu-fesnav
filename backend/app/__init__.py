@@ -22,7 +22,7 @@ def create_app():
         'instance_relative_config': True,
     }
     if is_production:
-        app_kwargs['static_folder'] = '../../frontend/build'
+        app_kwargs['static_folder'] = os.getenv('STATIC_FOLDER', '../../frontend/build')
 
     app = Flask(__name__, **app_kwargs)
 
