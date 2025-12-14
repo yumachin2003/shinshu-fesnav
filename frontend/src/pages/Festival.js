@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Container, Title, Text, SimpleGrid, Card, SegmentedControl, Alert, Select, Group, LoadingOverlay, Box, Image, Badge, Paper, Stack, Grid, Button } from '@mantine/core';
-import { IconCalendar, IconMapPin, IconHeart } from '@tabler/icons-react';
+import { Container, Title, Text, SimpleGrid, Card, SegmentedControl, Alert, Select, Group, LoadingOverlay, Box, Image, Badge, Paper, Stack, Grid, Button, Center } from '@mantine/core';
+import { IconCalendar, IconMapPin, IconHeart, IconList, IconMap } from '@tabler/icons-react';
 import { UserContext } from "../App";
 import { getFestivals, getAccountData } from '../utils/apiService'; // getAccountDataをインポート
 import useApiData from '../hooks/useApiData'; // useApiDataフックをインポート
@@ -112,9 +112,33 @@ export default function Festival() {
   // SegmentedControlのデータをuseMemoでメモ化
   const segmentData = useMemo(() => {
     const baseData = [
-      { label: 'リスト', value: 'list' },
-      { label: 'カレンダー', value: 'calendar' },
-      { label: '地図', value: 'map' },
+      {
+        value: 'list',
+        label: (
+          <Center>
+            <IconList size="1rem" />
+            <Box ml="xs">リスト</Box>
+          </Center>
+        ),
+      },
+      {
+        value: 'calendar',
+        label: (
+          <Center>
+            <IconCalendar size="1rem" />
+            <Box ml="xs">カレンダー</Box>
+          </Center>
+        ),
+      },
+      {
+        value: 'map',
+        label: (
+          <Center>
+            <IconMap size="1rem" />
+            <Box ml="xs">マップ</Box>
+          </Center>
+        ),
+      },
     ];
     // rootユーザーの場合のみ「登録」タブを追加
     if (user && user.username === 'root') {
