@@ -1,0 +1,6 @@
+{
+  "GOOGLE_CLIENT_ID": "355591951102-jj1iulnb41pp6fluosu6o1eq6hug58pn.apps.googleusercontent.com",
+  "GOOGLE_CLIENT_SECRET": "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",
+  "GOOGLE_REDIRECT_URI": "http://localhost:5051/api/auth/google/callback",
+  "SECRET_KEY": "54ea1ee066b6fdb44004bd55a6ea41825ffa8637d2053b9d4293698a60d8bb36"
+}
