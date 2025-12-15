@@ -29,32 +29,42 @@ def google_callback():
     if not access_token:
         return "Token exchange failed", 400
 
-    # ② ユーザー情報取得
+    # ② ユーザー情報取得（1回だけ）
     userinfo = requests.get(
         "https://www.googleapis.com/oauth2/v2/userinfo",
         headers={"Authorization": f"Bearer {access_token}"},
     ).json()
 
-    email = userinfo["email"]
-    name = userinfo.get("name")  # ← ★ 追加（Googleの表示名）
+    email = userinfo.get("email")
+    name = userinfo.get("name")  # ← Googleアカウント名
 
-    # ③ ユーザー作成 or 取得
-    userinfo = requests.get(
-        "https://www.googleapis.com/oauth2/v2/userinfo",
-        headers={"Authorization": f"Bearer {access_token}"},
-    ).json()
+    if not email:
+        return "Failed to get email", 400
 
-    email = userinfo["email"]
-    name = userinfo.get("name")  # ← Googleの表示名
-
+    # ③ ユーザー作成 or 更新
     user = User.query.filter_by(username=email).first()
     if not user:
-        user = User(
-            username=email,
-            display_name=name,
-        )
+        user = User(username=email, password="google-login")
+        user.display_name = name
         db.session.add(user)
     else:
-        # 既存ユーザーでも更新しておく
-        user.display_name = name
-        db.session.commit()
+        user.display_name = name  # ← 毎回同期（名前変更にも対応）
+
+    db.session.commit()
+
+
+    # ④ JWT 発行
+    token = jwt.encode(
+        {
+            "user_id": user.id,
+            "display_name": user.display_name,
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7),
+        },
+        current_app.config["SECRET_KEY"],
+        algorithm="HS256",
+    )
+
+
+    # ⑤ フロントへ token を渡す
+    frontend_url = current_app.config["FRONTEND_URL"]
+    return redirect(f"{frontend_url}/login?token={token}")

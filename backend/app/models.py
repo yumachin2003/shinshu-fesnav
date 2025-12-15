@@ -76,6 +76,17 @@ class UserDiary(db.Model):
     user = db.relationship("User", backref=db.backref("diaries", lazy=True))
     festival = db.relationship("Festivals", backref=db.backref("diaries_for", lazy=True))
 
+    # 🔹 追加: to_dict メソッド
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "festival_id": self.festival_id,
+            "text": self.text,
+            "image": self.image,
+            "timestamp": self.timestamp,
+            "date": self.date
+        }
 
 class EditLog(db.Model):
     __tablename__ = "edit_logs"

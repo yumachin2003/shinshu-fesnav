@@ -1,17 +1,16 @@
 import { useState, useEffect } from 'react';
 
 /**
- * APIからデータを非同期に取得するためのカスタムフック
- * @param {Function} apiFunc - データを取得するためのAPI関数 (例: getFestivals)
- * @param {Array} deps - useEffectの依存配列 (デフォルトは空配列)
- * @returns {Object} { data, loading, error, refetch }
+ * APIからデータを非同期に取得するカスタムフック
+ * skip=true の場合は fetch せずに待機
  */
-const useApiData = (apiFunc, deps = []) => {
+const useApiData = (apiFunc, deps = [], skip = false) => {
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!skip);
   const [error, setError] = useState(null);
 
   const fetchData = async () => {
+    if (skip) return;
     setLoading(true);
     setError(null);
     try {

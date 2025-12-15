@@ -24,15 +24,27 @@ export default function Login() {
     const token = params.get("token");
 
     if (token) {
-      // 保存
+      // トークン保存
       localStorage.setItem("authToken", token);
 
-      // ここでユーザーデータを API から取得してセットしてもOK
-      // ログイン後の遷移
-      navigate("/festivals");
-    }
-  }, [navigate]);
+      // JWT を decode
+      const payload = JSON.parse(atob(token.split(".")[1]));
 
+      const userData = {
+        id: payload.user_id,
+        username: payload.email ?? payload.user_id,
+        display_name: payload.display_name,
+        isGoogle: true,
+      };
+
+      // 保存
+      localStorage.setItem("user", JSON.stringify(userData));
+      setUser(userData);
+
+      // クエリを消して遷移（重要）
+      navigate("/festivals", { replace: true });
+    }
+  }, [navigate, setUser]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

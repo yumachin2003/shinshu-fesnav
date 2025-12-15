@@ -51,14 +51,28 @@ export default function App() {
     const token = localStorage.getItem('authToken');
 
     if (!token) {
-      setUser(null);  // ← 未ログイン状態にする
+      setUser(null);
       return;
     }
 
     getAccountData()
-      .then(res => setUser(res.data))
-      .catch(() => setUser(null));  // token が無効ならログアウト扱い
-    }, []);
+      .then(res => {
+        setUser(prev => ({
+          ...prev,     // ← localStorage の user（display_name 含む）
+          ...res.data, // ← API の最新情報
+        }));
+
+        // 念のため localStorage も同期
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            ...safeParse("user"),
+            ...res.data,
+          })
+        );
+      })
+      .catch(() => setUser(null));
+  }, []);
 
   return (
     <MantineProvider theme={{ colorScheme }} forceColorScheme={colorScheme}>
