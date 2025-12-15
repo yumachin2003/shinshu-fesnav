@@ -39,6 +39,9 @@ def create_app():
         GOOGLE_CLIENT_ID=os.getenv("REACT_APP_GOOGLE_CLIENT_ID"),
         GOOGLE_CLIENT_SECRET=os.getenv("REACT_APP_GOOGLE_CLIENT_SECRET"),
         GOOGLE_REDIRECT_URI=os.getenv("REACT_APP_GOOGLE_REDIRECT_URI"),
+
+        # ★ フロントURL（これを追加）
+        FRONTEND_URL=os.getenv("FRONTEND_URL"),
     )
 
     # --- Extensions Init ---
