@@ -18,7 +18,7 @@ import axios from "axios";
 axios.defaults.baseURL = "http://localhost:5000";
 
 axios.defaults.headers.common["Authorization"] =
-  `Bearer ${localStorage.getItem("Token")}`;
+  `Bearer ${localStorage.getItem("authToken")}`;
 
 // ユーザー情報共有のためのContext作成
 export const UserContext = React.createContext();
@@ -48,17 +48,31 @@ export default function App() {
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('authToken');
 
     if (!token) {
-      setUser(null);  // ← 未ログイン状態にする
+      setUser(null);
       return;
     }
 
     getAccountData()
-      .then(res => setUser(res.data))
-      .catch(() => setUser(null));  // token が無効ならログアウト扱い
-    }, []);
+      .then(res => {
+        setUser(prev => ({
+          ...prev,     // ← localStorage の user（display_name 含む）
+          ...res.data, // ← API の最新情報
+        }));
+
+        // 念のため localStorage も同期
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            ...safeParse("user"),
+            ...res.data,
+          })
+        );
+      })
+      .catch(() => setUser(null));
+  }, []);
 
   return (
     <MantineProvider theme={{ colorScheme }} forceColorScheme={colorScheme}>
