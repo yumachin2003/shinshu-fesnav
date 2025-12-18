@@ -62,13 +62,17 @@ def get_festivals():
         Festivals.latitude,
         Festivals.longitude,
         Festivals.attendance,
+        Festivals.description, # descriptionを追加
+        Festivals.access, # accessを追加
     ).all()
 
     festival_list = []
     for festival in festivals_query:
         festival_data = {
             'id': festival.id, 'name': festival.name, 'date': festival.date.strftime('%Y-%m-%d') if festival.date else None,
-            'location': festival.location, 'latitude': festival.latitude, 'longitude': festival.longitude, 'attendance': festival.attendance
+            'location': festival.location, 'latitude': festival.latitude, 'longitude': festival.longitude, 'attendance': festival.attendance,
+            'description': festival.description, # レスポンスに追加
+            'access': festival.access # レスポンスに追加
         }
 
         festival_list.append(festival_data)
@@ -89,11 +93,25 @@ def add_festival():
     if not data or not data.get('name') or not data.get('location'):
         return jsonify({'error': 'Name and location are required'}), 400
     
-    # 同じ名前と日付のお祭りが既に存在するかチェック
-    if data.get('date'):
-        existing_festival = Festivals.query.filter_by(name=data['name'], date=data['date']).first()
-        if existing_festival:
-            return jsonify({'error': '同じ名前と日付のお祭りが既に存在します。'}), 409 # 409 Conflict
+    # 同じ名前のお祭りが既に存在するかチェック (日付更新のため名前のみで検索)
+    existing_festival = Festivals.query.filter_by(name=data['name']).first()
+    if existing_festival:
+        # 既に存在する場合は情報を更新する (Upsert)
+        if data.get('date'):
+            try:
+                existing_festival.date = datetime.datetime.strptime(data['date'], '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                pass
+
+        existing_festival.description = data.get('description', existing_festival.description)
+        existing_festival.access = data.get('access', existing_festival.access)
+        existing_festival.attendance = data.get('attendance', existing_festival.attendance)
+        existing_festival.latitude = data.get('latitude', existing_festival.latitude)
+        existing_festival.longitude = data.get('longitude', existing_festival.longitude)
+        existing_festival.location = data.get('location', existing_festival.location)
+        
+        db.session.commit()
+        return jsonify(existing_festival.to_dict()), 200
 
     fes_date = None
     try:
@@ -108,6 +126,7 @@ def add_festival():
         date=fes_date,
         location=data['location'],
         description=data.get('description'),
+        access=data.get('access'),
         attendance=data.get('attendance'),
         latitude=data.get('latitude'),
         longitude=data.get('longitude')
@@ -115,6 +134,27 @@ def add_festival():
     db.session.add(new_festival)
     db.session.commit()
     return jsonify(new_festival.to_dict()), 201
+
+# DELETE /api/festivals/<int:festival_id> : お祭りを削除
+@api_bp.route('/festivals/<int:festival_id>', methods=['DELETE'])
+@token_required
+def delete_festival(festival_id):
+    # 権限チェック (必要に応じて有効化)
+    # if g.current_user.username != "root":
+    #     return jsonify({'error': '権限がありません'}), 403
+
+    festival = Festivals.query.get(festival_id)
+    if not festival:
+        return jsonify({'error': 'Festival not found'}), 404
+
+    # 関連データの削除
+    UserFavorite.query.filter_by(festival_id=festival_id).delete()
+    UserDiary.query.filter_by(festival_id=festival_id).delete()
+    Review.query.filter_by(festival_id=festival_id).delete()
+    
+    db.session.delete(festival)
+    db.session.commit()
+    return jsonify({'message': 'Festival deleted successfully'}), 200
 
 # --- Review API ---
 
