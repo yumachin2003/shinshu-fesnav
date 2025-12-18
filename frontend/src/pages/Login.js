@@ -109,6 +109,16 @@ export default function Login() {
         />
         Googleでログイン
       </Button>
+      <Button
+        fullWidth
+        mt="md"
+        color="green"
+        onClick={() => {
+          window.location.href = "http://localhost:5051/api/auth/line";
+        }}
+      >
+        LINEでログイン
+      </Button>
       <Text c="dimmed" size="sm" ta="center" mt={5}>
         アカウントをお持ちでないですか？{' '}
         <Anchor size="sm" component={Link} to="/register">新規登録</Anchor>
