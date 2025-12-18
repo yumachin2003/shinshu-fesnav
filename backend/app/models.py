@@ -14,6 +14,7 @@ class Festivals(db.Model):
     attendance = db.Column(db.Integer, default=0)
     attend_year = db.Column(db.Integer, default=0)
     description = db.Column(db.Text, nullable=True)
+    access = db.Column(db.String(255), nullable=True)
 
     def to_dict(self):
         return {
@@ -26,6 +27,7 @@ class Festivals(db.Model):
             "attendance": self.attendance,
             "attend_year": self.attend_year,
             "description": self.description,
+            "access": self.access,
         }
 
 

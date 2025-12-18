@@ -141,7 +141,7 @@ export default function FestivalDetail() {
         {/* --- お祭りの概要 --- */}
         <Paper mt="xl" p="lg" bg="gray.0" withBorder>
             <Title order={4} mb="sm">お祭りの概要</Title>
-            <Text lh="lg" style={{ whiteSpace: 'pre-wrap' }}>
+            <Text lh="lg" c="black" style={{ whiteSpace: 'pre-wrap' }}>
               {festival.description || 'このお祭りの概要はまだ登録されていません。'}
             </Text>
         </Paper>
