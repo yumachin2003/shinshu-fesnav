@@ -51,6 +51,10 @@ class User(db.Model):
         if not self.password_hash:
             return False
         return bcrypt.check_password_hash(self.password_hash, password)
+    
+      # ⭐ Apple
+    apple_user_id = db.Column(db.String(255), unique=True, nullable=True)
+    apple_email = db.Column(db.String(255), nullable=True)
 
 class UserFavorite(db.Model):
     __tablename__ = "user_favorites"
