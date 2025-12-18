@@ -41,6 +41,9 @@ class User(db.Model):
     # Google 表示名
     display_name = db.Column(db.String(120), nullable=True)
 
+    # ⭐ LINEログイン用
+    line_user_id = db.Column(db.String(255), unique=True, nullable=True)
+
     def set_password(self, password):
         self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
 
@@ -48,7 +51,6 @@ class User(db.Model):
         if not self.password_hash:
             return False
         return bcrypt.check_password_hash(self.password_hash, password)
-
 
 class UserFavorite(db.Model):
     __tablename__ = "user_favorites"
