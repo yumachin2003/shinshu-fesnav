@@ -4,6 +4,8 @@ import jwt
 import datetime
 from .models import User
 from . import db
+from jwt import PyJWKClient
+import json
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -44,14 +46,15 @@ def google_callback():
     # ③ ユーザー作成 or 更新
     user = User.query.filter_by(username=email).first()
     if not user:
-        user = User(username=email, password="google-login")
-        user.display_name = name
+        user = User(
+            username=email,
+            display_name=name,
+        )
         db.session.add(user)
     else:
-        user.display_name = name  # ← 毎回同期（名前変更にも対応）
+        user.display_name = name
 
     db.session.commit()
-
 
     # ④ JWT 発行
     token = jwt.encode(
@@ -66,5 +69,140 @@ def google_callback():
 
 
     # ⑤ フロントへ token を渡す
+    frontend_url = current_app.config["FRONTEND_URL"]
+    return redirect(f"{frontend_url}/login?token={token}")
+
+@auth_bp.route("/line")
+def line_login():
+    line_auth_url = (
+        "https://access.line.me/oauth2/v2.1/authorize"
+        "?response_type=code"
+        f"&client_id={current_app.config['LINE_CHANNEL_ID']}"
+        f"&redirect_uri={current_app.config['LINE_REDIRECT_URI']}"
+        "&state=LINE_LOGIN"
+        "&scope=profile%20openid%20email"
+    )
+    return redirect(line_auth_url)
+
+@auth_bp.route("/line/callback")
+def line_callback():
+    code = request.args.get("code")
+    if not code:
+        return "No code", 400
+
+    # ① code → access_token
+    token_res = requests.post(
+        "https://api.line.me/oauth2/v2.1/token",
+        data={
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": current_app.config["LINE_REDIRECT_URI"],
+            "client_id": current_app.config["LINE_CHANNEL_ID"],
+            "client_secret": current_app.config["LINE_CHANNEL_SECRET"],
+        },
+    ).json()
+
+    access_token = token_res.get("access_token")
+    if not access_token:
+        return "LINE token exchange failed", 400
+
+    # ② プロフィール取得
+    profile = requests.get(
+        "https://api.line.me/v2/profile",
+        headers={"Authorization": f"Bearer {access_token}"},
+    ).json()
+
+    line_user_id = profile.get("userId")
+    display_name = profile.get("displayName")
+
+    if not line_user_id:
+        return "Failed to get LINE user id", 400
+
+    username = f"line:{line_user_id}"
+
+    # ③ ユーザー作成 or 取得
+    user = User.query.filter_by(line_user_id=line_user_id).first()
+    if not user:
+        user = User(
+            username=username,
+            line_user_id=line_user_id,
+            display_name=display_name,
+        )
+        user.set_password("line-login")  # ← ★必須
+        db.session.add(user)
+    
+    else:
+        user.display_name = display_name
+
+    db.session.commit()
+
+    # ④ JWT 発行（Googleと同じ）
+    token = jwt.encode(
+        {
+            "user_id": user.id,
+            "display_name": user.display_name,
+            "login_type": "line",
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7),
+        },
+        current_app.config["SECRET_KEY"],
+        algorithm="HS256",
+    )
+
+    frontend_url = current_app.config["FRONTEND_URL"]
+    return redirect(f"{frontend_url}/login?token={token}")
+
+@auth_bp.route("/apple/callback", methods=["POST"])
+def apple_callback():
+    id_token = request.form.get("id_token")
+    if not id_token:
+        return "No id_token", 400
+
+    # ① Apple 公開鍵取得
+    jwk_client = PyJWKClient("https://appleid.apple.com/auth/keys")
+    signing_key = jwk_client.get_signing_key_from_jwt(id_token)
+
+    # ② JWT検証
+    decoded = jwt.decode(
+        id_token,
+        signing_key.key,
+        algorithms=["RS256"],
+        audience=current_app.config["APPLE_CLIENT_ID"],
+        issuer="https://appleid.apple.com",
+    )
+
+    apple_user_id = decoded["sub"]
+    email = decoded.get("email")
+    name = None
+
+    # 初回のみ name が form で届く
+    if "user" in request.form:
+        user_info = json.loads(request.form["user"])
+        name = user_info["name"]["firstName"] + " " + user_info["name"]["lastName"]
+
+    # ③ ユーザー作成 or 取得
+    user = User.query.filter_by(apple_user_id=apple_user_id).first()
+    if not user:
+        user = User(
+            username=email or f"apple:{apple_user_id}",
+            apple_user_id=apple_user_id,
+            apple_email=email,
+            display_name=name or "Apple User",
+        )
+        db.session.add(user)
+
+    db.session.commit()
+
+    # ④ JWT 発行（Google / LINE と同じ）
+    token = jwt.encode(
+        {
+            "user_id": user.id,
+            "display_name": user.display_name,
+            "login_type": "apple",
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7),
+        },
+        current_app.config["SECRET_KEY"],
+        algorithm="HS256",
+    )
+
     frontend_url = current_app.config["FRONTEND_URL"]
     return redirect(f"{frontend_url}/login?token={token}")
