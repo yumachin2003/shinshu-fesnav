@@ -28,9 +28,13 @@ import AddToICalendarButton from "../components/AddToICalendarButton";
 // ★ コンポーネント化した日記機能
 import { DiaryForm, DiaryList, useDiary } from "../components/Diary";
 
+import InformationModal from "../components/InformationModal";
+
 export default function FestivalDetail() {
   const { id } = useParams();
   const { user } = useContext(UserContext);
+
+  const [open, setOpen] = useState(false);
 
   // APIデータ
   const {
@@ -202,6 +206,21 @@ export default function FestivalDetail() {
           />
         </Paper>
       )}
+      <Button
+        fullWidth
+        mt="xl"
+        variant="light"
+        onClick={() => setOpen(true)}
+      >
+        📝 情報を提供する
+      </Button>
+
+      {/* ★ 情報提供モーダル */}
+      <InformationModal
+        opened={open}
+        onClose={() => setOpen(false)}
+        festival={festival}
+      />
     </Container>
   );
 }

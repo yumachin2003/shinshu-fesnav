@@ -53,13 +53,13 @@ def create_app():
     bcrypt.init_app(app)
 
     if not is_production:
-        # == Development Mode (2 Ports) ==
+        # 開発用に /api/* すべてのオリジンとメソッドを許可
         CORS(
             app,
-            resources={r"/api/*": {"origins": "http://localhost:3000"}},
+            resources={r"/api/*": {"origins": "*"}},  # localhost:3000 以外も許可
             supports_credentials=True,
             allow_headers=["Content-Type", "Authorization"],
-            methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # PATCH も追加
         )
 
     with app.app_context():
@@ -81,5 +81,6 @@ def create_app():
 
         # --- DB Creation ---
         db.create_all()
+
 
     return app

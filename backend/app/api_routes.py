@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app, g
-from .models import Festivals, User, UserFavorite, UserDiary, EditLog, Review
+from .models import Festivals, User, UserFavorite, UserDiary, EditLog, Review,  InformationSubmission
 from datetime import datetime, timedelta
 from . import db
 from .utils import calculate_concrete_date # 日付計算ユーティリティをインポート
@@ -16,22 +16,17 @@ api_bp = Blueprint('api', __name__, url_prefix='/api')
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if request.method == 'OPTIONS': # CORSのプリフライトリクエストは認証不要で通過させる
-            return jsonify({'message': 'Preflight request successful'}), 200
-
         token = None
-        # リクエストヘッダーからAuthorizationトークンを取得
         if 'Authorization' in request.headers:
-            token = request.headers['Authorization'].split(" ")[1] # 'Bearer <token>' の形式を想定
+            token = request.headers['Authorization'].split(" ")[1]
 
         if not token:
             return jsonify({'message': 'トークンがありません。認証が必要です。'}), 401
 
         try:
-            # トークンをデコードしてユーザー情報を取得
             data = pyjwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             current_user = User.query.filter_by(id=data['user_id']).first()
-            g.current_user = current_user # リクエストコンテキストにユーザー情報を保存
+            g.current_user = current_user
         except pyjwt.ExpiredSignatureError:
             return jsonify({'message': 'トークンの有効期限が切れています。再ログインしてください。'}), 401
         except pyjwt.InvalidTokenError:
@@ -377,3 +372,51 @@ def google_login():
 
     auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
     return jsonify({"url": auth_url})
+
+@api_bp.route("/information", methods=["POST"])
+def submit_information():
+    data = request.get_json()
+
+    if not data or not data.get("title") or not data.get("content"):
+        return jsonify({"error": "title and content are required"}), 400
+
+    info = InformationSubmission(
+        festival_id=data.get("festival_id"),
+        festival_name=data.get("festival_name"),
+        title=data["title"],
+        content=data["content"],
+        submitter_name=data.get("name"),
+        submitter_email=data.get("email"),
+    )
+    db.session.add(info)
+    db.session.commit()
+
+    return jsonify({"message": "submitted"}), 201
+
+@api_bp.route("/information", methods=["GET"])
+@token_required
+def get_information_list():
+    if g.current_user.username != "root":
+        return jsonify({"error": "forbidden"}), 403
+
+    infos = InformationSubmission.query.order_by(
+        InformationSubmission.created_at.desc()
+    ).all()
+
+    return jsonify([i.to_dict() for i in infos])
+
+# 対処済みにする POST API（旧PATCHを置き換え）
+@api_bp.route("/information/<int:info_id>/check", methods=["POST"])
+@token_required
+def check_information(info_id):
+    # rootユーザーのみ
+    if g.current_user.username != "root":
+        return jsonify({"error": "forbidden"}), 403
+
+    info = InformationSubmission.query.get(info_id)
+    if not info:
+        return jsonify({"error": "情報提供が見つかりません"}), 404
+
+    info.is_checked = True
+    db.session.commit()
+    return jsonify(info.to_dict()), 200
