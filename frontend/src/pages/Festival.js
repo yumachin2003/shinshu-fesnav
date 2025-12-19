@@ -102,6 +102,9 @@ export default function Festival() {
       case 'popularity':
         // 人気順（動員数が多い順）
         return festivalsCopy.sort((a, b) => (b.attendance || 0) - (a.attendance || 0));
+      case 'newest':
+        // 新着順（IDの降順）
+        return festivalsCopy.sort((a, b) => b.id - a.id);
       case 'default':
       default:
         // デフォルト（ID順）
@@ -204,7 +207,11 @@ export default function Festival() {
                   </Group>
                   <Group gap="xs">
                     <IconMapPin size={16} stroke={1.5} />
-                    <Text size="sm" c="dimmed" truncate>{f.location || '未定'}</Text>
+                    <Text size="sm" c="dimmed" truncate>
+                      {f.location
+                        ? f.location.split('・')[0]
+                        : '未定'}
+                    </Text>
                   </Group>
                 </Stack>
               </Card>
@@ -263,6 +270,7 @@ export default function Festival() {
                   onChange={(value) => setSortBy(value || 'default')}
                   data={[
                     { label: 'デフォルト', value: 'default' },
+                    { label: '新着順', value: 'newest' },
                     { label: '開催日が近い順', value: 'date' },
                     { label: '人気順', value: 'popularity' },
                   ]}
@@ -270,6 +278,7 @@ export default function Festival() {
               </Grid.Col>
               <Grid.Col span={{ base: 12, sm: 'content' }}>
                   <Button variant="outline" onClick={() => { setFilterMonth(null); setFilterArea(null); }}>フィルターをリセット</Button>
+                  <Button variant="light" ml="xs" onClick={refetchFestivals} loading={festivalsLoading}>更新</Button>
               </Grid.Col>
             </Grid>
           </Paper>

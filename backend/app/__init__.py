@@ -32,15 +32,18 @@ def create_app():
         SQLALCHEMY_DATABASE_URI="sqlite:///fesData.db",
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
 
-        # JWT用（.env から読む）
         SECRET_KEY=os.getenv("SECRET_KEY"),
 
-        # Google OAuth（React と同じ .env を使う）
+        # Google
         GOOGLE_CLIENT_ID=os.getenv("REACT_APP_GOOGLE_CLIENT_ID"),
         GOOGLE_CLIENT_SECRET=os.getenv("REACT_APP_GOOGLE_CLIENT_SECRET"),
         GOOGLE_REDIRECT_URI=os.getenv("REACT_APP_GOOGLE_REDIRECT_URI"),
 
-        # ★ フロントURL（これを追加）
+        # LINE ★追加
+        LINE_CHANNEL_ID=os.getenv("REACT_APP_LINE_CHANNEL_ID"),
+        LINE_CHANNEL_SECRET=os.getenv("REACT_APP_LINE_CHANNEL_SECRET"),
+        LINE_REDIRECT_URI=os.getenv("REACT_APP_LINE_REDIRECT_URI"),
+
         FRONTEND_URL=os.getenv("FRONTEND_URL"),
     )
 
@@ -50,13 +53,13 @@ def create_app():
     bcrypt.init_app(app)
 
     if not is_production:
-        # == Development Mode (2 Ports) ==
+        # 開発用に /api/* すべてのオリジンとメソッドを許可
         CORS(
             app,
-            resources={r"/api/*": {"origins": "http://localhost:3000"}},
+            resources={r"/api/*": {"origins": "*"}},  # localhost:3000 以外も許可
             supports_credentials=True,
             allow_headers=["Content-Type", "Authorization"],
-            methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # PATCH も追加
         )
 
     with app.app_context():
@@ -78,5 +81,6 @@ def create_app():
 
         # --- DB Creation ---
         db.create_all()
+
 
     return app

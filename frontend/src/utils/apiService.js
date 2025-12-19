@@ -86,3 +86,11 @@ export const getEditLogs = () => {
 export const addEditLogToBackend = (logData) => {
   return apiClient.post('/editlogs', logData);
 };
+
+export const submitInformation = (data) => {
+  return apiClient.post("/information", data);
+};
+
+export const getInformationList = () => {
+  return apiClient.get("/information");
+};
