@@ -29,7 +29,7 @@ def create_app():
 
     # --- ✅ Basic Config（ここが重要） ---
     app.config.from_mapping(
-        SQLALCHEMY_DATABASE_URI="sqlite:///fesData.db",
+        SQLALCHEMY_DATABASE_URI=os.getenv("DATABASE_URL", "sqlite:///fesData.db"),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
 
         SECRET_KEY=os.getenv("SECRET_KEY"),
