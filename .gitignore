@@ -5,3 +5,4 @@ node_modules
 SFstart
 docker-compose.yml
 docker-build.sh
+backend/instance/fesData.db
