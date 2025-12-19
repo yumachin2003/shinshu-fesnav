@@ -122,3 +122,33 @@ class Review(db.Model):
 
     user = db.relationship("User", backref=db.backref("reviews", lazy=True))
     festival = db.relationship("Festivals", backref=db.backref("reviews", lazy=True))
+
+# models.py
+class InformationSubmission(db.Model):
+    __tablename__ = "information_submissions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    festival_id = db.Column(db.Integer, nullable=True)
+    festival_name = db.Column(db.String(120), nullable=True)
+
+    title = db.Column(db.String(120), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+
+    submitter_name = db.Column(db.String(120), nullable=True)
+    submitter_email = db.Column(db.String(255), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_checked = db.Column(db.Boolean, default=False)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "festival_id": self.festival_id,
+            "festival_name": self.festival_name,
+            "title": self.title,
+            "content": self.content,
+            "submitter_name": self.submitter_name,
+            "submitter_email": self.submitter_email,
+            "created_at": self.created_at.isoformat(),
+            "is_checked": self.is_checked,
+        }

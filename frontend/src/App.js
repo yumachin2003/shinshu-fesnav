@@ -13,6 +13,8 @@ import ItemManagement from "./pages/ItemManagement";
 import './App.css'; // アプリケーション全体のスタイルをインポート
 import { getAccountData } from "./utils/apiService";
 import axios from "axios";
+import InformationDashboard from "./pages/InformationDashboard";
+
 
 // axiosの設定
 axios.defaults.baseURL = "http://localhost:5000";
@@ -91,6 +93,11 @@ export default function App() {
                   {user ? (
                     <>
                       <Button component={Link} to="/items" variant="subtle">アイテム管理</Button>
+                      {user?.username === "root" && (
+                        <Button component={Link} to="/information" variant="subtle">
+                          情報提供
+                        </Button>
+                      )}
                       <Button component={Link} to="/account" variant="subtle">アカウント</Button>
                     </>
                   ) : (
@@ -118,11 +125,22 @@ export default function App() {
                 <Route path="/" element={<Festival />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
-                <Route path="/festivals" element={<Festival />} /> {/* お祭り一覧ページ */}
-                <Route path="/festivals/:id" element={<FestivalDetail />} /> {/* お祭り詳細ページ */}
+                <Route path="/festivals" element={<Festival />} />
+                <Route path="/festivals/:id" element={<FestivalDetail />} />
                 <Route path="/items" element={user ? <ItemManagement /> : <Navigate to="/login" />} />
                 <Route path="/account" element={user ? <Account /> : <Navigate to="/login" />} />
+
+                {/* ★ root 専用 */}
+                <Route
+                  path="/information"
+                  element={
+                    user?.username === "root"
+                    ? <InformationDashboard />
+                    : <Navigate to="/" />
+                  }
+                />
               </Routes>
+
             </AppShell.Main>
           </AppShell>
         </Router>
