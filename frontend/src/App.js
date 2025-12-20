@@ -17,7 +17,7 @@ import InformationDashboard from "./pages/InformationDashboard";
 
 
 // axiosの設定
-axios.defaults.baseURL = "http://localhost:5000";
+axios.defaults.baseURL = "http://localhost:5051";
 
 axios.defaults.headers.common["Authorization"] =
   `Bearer ${localStorage.getItem("authToken")}`;

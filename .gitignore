@@ -2,8 +2,9 @@
 start.sh
 Dockerfile
 node_modules
-SFstart
 docker-compose.yml
 docker-build.sh
 backend/instance/fesData.db
 mysql.Dockerfile
+mysql_data/
+backend/migrate_data.py

@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start-backend:dev": "cd backend && pipenv run flask run --host=0.0.0.0 --port=5051 --debug",
-    "start-backend:prod": "cd backend && export FLASK_ENV=production && pipenv run gunicorn --workers 4 --bind 0.0.0.0:5051 \"app:create_app()\"",
-    "start-react": "cd frontend && npm start",
+    "backend:dev": "cd backend && pipenv run flask run --host=0.0.0.0 --port=5051 --debug",
+    "backend:prod": "cd backend && export FLASK_ENV=production && pipenv run gunicorn --workers 4 --bind 0.0.0.0:5051 \"app:create_app()\"",
+    "frontend": "cd frontend && npm start",
     "build-frontend": "cd frontend && npm run build",
-    "dev": "concurrently \"npm:start-backend:dev\" \"npm:start-react\"",
-    "prod": "npm run build-frontend && npm run start-backend:prod"
+    "dev": "concurrently \"npm:backend:dev\" \"npm:frontend\"",
+    "prod": "npm run build-frontend && npm run backend:prod"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
