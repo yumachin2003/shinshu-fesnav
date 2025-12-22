@@ -17,7 +17,8 @@ import InformationDashboard from "./pages/InformationDashboard";
 
 
 // axiosの設定
-axios.defaults.baseURL = "http://localhost:5051";
+// 開発環境では localhost:5051 を、本番環境（ビルド後）は同じドメインの相対パスを参照するようにします
+axios.defaults.baseURL = process.env.NODE_ENV === 'production' ? "" : "http://localhost:5051";
 
 axios.defaults.headers.common["Authorization"] =
   `Bearer ${localStorage.getItem("authToken")}`;
