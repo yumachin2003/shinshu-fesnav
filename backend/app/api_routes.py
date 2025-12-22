@@ -201,7 +201,8 @@ def register():
     if User.query.filter_by(username=username).first():
         return jsonify({'error': 'このユーザー名は既に使用されています'}), 400
 
-    new_user = User(username=username, password=password)
+    new_user = User(username=username)
+    new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()
 
