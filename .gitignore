@@ -5,3 +5,6 @@ node_modules
 SFstart
 docker-compose.yml
 docker-build.sh
+backend/migrate_data.py
+mysql_data/
+mysql.Dockerfile
