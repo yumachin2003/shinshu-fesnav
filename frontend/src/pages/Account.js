@@ -5,13 +5,23 @@ import { UserContext } from "../App";
 import { getFestivals, getAccountData, updateFavorites, updateDiaries, getEditLogs, addEditLogToBackend } from "../utils/apiService";
 import useApiData from '../hooks/useApiData';
 import { initGoogleTranslate } from "../utils/translate";
+import { IconLogout } from '@tabler/icons-react';
+import { useLogout } from "../hooks/useLogout";
 
 export default function Account() {
-  const { user, setUser } = useContext(UserContext);
+  const { user } = useContext(UserContext);
   const navigate = useNavigate();
 
   // --- Google翻訳初期化 ---
   useEffect(() => initGoogleTranslate(), []);
+
+  // --- ログインチェックとリダイレクト ---
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (!user && !storedUser) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
 
   // --- APIデータ取得 ---
   const { data: festivals, loading: festivalsLoading, error: festivalsError } = useApiData(getFestivals);
@@ -55,12 +65,7 @@ export default function Account() {
     await updateDiaries(updated).catch(err => console.error("日記の更新に失敗", err));
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('user');
-    setUser(null);
-    navigate("/");
-  };
+  const logout = useLogout();
 
   const logEditAction = async (festival, content) => {
     if (!user || !festival) return;
@@ -70,40 +75,6 @@ export default function Account() {
   };
 
   const allPhotos = Object.values(diaries).flat(1).filter(e => e.image);
-
-  // --- 写真操作関数 ---
-  const handleAddPhoto = (fid, file) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const updated = { ...diaries };
-      if (!updated[fid]) updated[fid] = [];
-      updated[fid].push({ text: "", image: reader.result, date: new Date().toLocaleDateString(), timestamp: Date.now() });
-      saveDiaries(updated);
-      logEditAction(festivals.find(f => f.id === fid), "写真を追加しました");
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleDeletePhoto = (fid, timestamp) => {
-    const updated = { ...diaries };
-    updated[fid] = updated[fid].filter(x => x.timestamp !== timestamp);
-    saveDiaries(updated);
-    logEditAction(festivals.find(f => f.id === fid), "写真を削除しました");
-  };
-
-  const handleChangePhoto = (fid, timestamp, file) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const updated = { ...diaries };
-      const idx = updated[fid].findIndex(x => x.timestamp === timestamp);
-      if (idx !== -1) {
-        updated[fid][idx].image = reader.result;
-        saveDiaries(updated);
-        logEditAction(festivals.find(f => f.id === fid), "写真を変更しました");
-      }
-    };
-    reader.readAsDataURL(file);
-  };
 
   // --- CSV出力 ---
   const handleExportCSV = () => {
@@ -129,7 +100,14 @@ export default function Account() {
 
       <Group justify="space-between" align="center" my="xl">
         <Title order={2}>{user.display_name ?? user.username} さんのマイページ</Title>
-        <Button onClick={handleLogout} color="red">ログアウト</Button>
+        <Button 
+          leftSection={<IconLogout size={16} />} 
+          color="red" 
+          variant="outline" 
+          onClick={logout}
+        >
+          ログアウト
+        </Button>
       </Group>
 
       <Tabs defaultValue="favorites">

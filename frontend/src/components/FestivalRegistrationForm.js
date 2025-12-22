@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { createFestival } from '../utils/apiService';
+import React, { useState, useEffect } from 'react';
+import { createFestival, updateFestival } from '../utils/apiService';
 import { useForm } from '@mantine/form';
 import { TextInput, Textarea, NumberInput, Button, Box, Stack, Alert } from '@mantine/core';
 
@@ -14,7 +14,7 @@ const INITIAL_STATE = {
   longitude: '',
 };
 
-function FestivalRegistrationForm({ onFestivalAdded }) {
+function FestivalRegistrationForm({ onFestivalAdded, festivalData }) {
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState(null);
 
@@ -27,13 +27,27 @@ function FestivalRegistrationForm({ onFestivalAdded }) {
     },
   });
 
+  // 編集モードの場合、初期値をセットする
+  useEffect(() => {
+    if (festivalData) {
+      form.setValues(festivalData);
+    } else {
+      form.reset();
+    }
+  }, [festivalData]);
+
   const handleSubmit = async (values) => {
     setLoading(true);
     setSubmitError(null);
     try {
-      await createFestival(values);
+      if (festivalData?.id) {
+        await updateFestival(festivalData.id, values);
+        alert('お祭り情報が更新されました！');
+      } else {
+        await createFestival(values);
+        alert('新しいお祭りが登録されました！');
+      }
       form.reset(); // フォームをリセット
-      alert('新しいお祭りが登録されました！');
       if (onFestivalAdded) {
         onFestivalAdded(); // 親コンポーネントに通知してリストを更新
       }
@@ -59,7 +73,7 @@ function FestivalRegistrationForm({ onFestivalAdded }) {
           <NumberInput label="緯度" placeholder="例: 36.64917" allowDecimal step={0.00001} precision={6} {...form.getInputProps('latitude')} />
           <NumberInput label="経度" placeholder="例: 138.19500" allowDecimal step={0.00001} precision={6} {...form.getInputProps('longitude')} />
           <Button type="submit" loading={loading}>
-            登録する
+            {festivalData ? '更新する' : '登録する'}
           </Button>
         </Stack>
       </form>

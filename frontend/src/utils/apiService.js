@@ -31,9 +31,15 @@ export const getFestivals = () => {
 };
 
 export const createFestival = (festival) => {
-  // バックエンドが必要とするフィールドのみを抽出して送信する
-  const { name, date, location } = festival;
-  return apiClient.post('/festivals', { name, date, location });
+  return apiClient.post('/festivals', festival);
+};
+
+export const updateFestival = (id, festival) => {
+  return apiClient.put(`/festivals/${id}`, festival);
+};
+
+export const deleteFestival = (id) => {
+  return apiClient.delete(`/festivals/${id}`);
 };
 
 // Review API

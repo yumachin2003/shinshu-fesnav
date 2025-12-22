@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { TextInput, PasswordInput, Button, Container, Title, Paper, Text, Anchor, Alert } from '@mantine/core';
 import { UserContext } from "../App";
 import { loginUser } from "../utils/apiService";
@@ -42,7 +42,8 @@ export default function Login() {
       setUser(userData);
 
       // クエリを消して遷移（重要）
-      navigate("/festivals", { replace: true });
+      const targetPath = userData.username === 'root' ? '/admin/dashboard' : '/festivals';
+      window.location.href = targetPath;
     }
   }, [navigate, setUser]);
 
@@ -63,7 +64,8 @@ export default function Login() {
       localStorage.setItem("authToken", token);
       localStorage.setItem("user", JSON.stringify(user)); // ユーザー情報も保存
       setUser(user); // Appコンテキストのユーザー情報を更新
-      navigate("/festivals"); // ログイン成功後、お祭り一覧ページに遷移
+      const targetPath = user.username === 'root' ? '/admin/dashboard' : '/festivals';
+      window.location.href = targetPath; // ログイン成功後、リロードを伴って遷移
     } catch (error) {
       console.error("ログインに失敗しました:", error.response?.data?.error || error.message);
       setError("ユーザー名またはパスワードが違います。");
@@ -134,7 +136,7 @@ export default function Login() {
       </form>
       <Text c="dimmed" size="sm" ta="center" mt={5}>
         アカウントをお持ちでないですか？{' '}
-        <Anchor size="sm" component={Link} to="/register">新規登録</Anchor>
+        <Anchor size="sm" href="/register">新規登録</Anchor>
       </Text>
     </Container>
   );

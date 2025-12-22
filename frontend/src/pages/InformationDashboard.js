@@ -1,10 +1,9 @@
-import { Container, Title, Card, Text, Button } from "@mantine/core";
+import { Container, Title, Card, Text } from "@mantine/core";
 import useApiData from "../hooks/useApiData";
 import { getInformationList } from "../utils/apiService";
-import axios from "axios";
 
 export default function InformationDashboard() {
-  const { data, loading, error, refetch } = useApiData(getInformationList);
+  const { data, loading, error } = useApiData(getInformationList);
 
   if (loading) return <Text>読み込み中...</Text>;
   if (error) return <Text color="red">エラーが発生しました</Text>;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { TextInput, PasswordInput, Button, Container, Title, Paper, Text, Anchor, Alert } from '@mantine/core';
+import { IconArrowLeft } from '@tabler/icons-react';
 import { initGoogleTranslate } from "../utils/translate";
 import { registerUser } from "../utils/apiService";
 
@@ -44,6 +45,16 @@ export default function Register() {
     <Container size={420} my={40}>
       {/* 🌐 左下に翻訳ウィジェット */}
       <div id="google_translate_element" style={{ position: "fixed", bottom: 10, left: 10, zIndex: 9999 }}></div>
+
+      <Button 
+        variant="subtle" 
+        leftSection={<IconArrowLeft size={16} />} 
+        onClick={() => navigate(-1)}
+        mb="md"
+        pl={0}
+      >
+        戻る
+      </Button>
 
       <Title ta="center">新規登録</Title>
 

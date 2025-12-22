@@ -1,41 +1,17 @@
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Container, Title, Text, SimpleGrid, Card, SegmentedControl, Alert, Select, Group, LoadingOverlay, Box, Image, Badge, Paper, Stack, Grid, Button, Center } from '@mantine/core';
 import { IconCalendar, IconMapPin, IconHeart, IconList, IconMap } from '@tabler/icons-react';
-import { UserContext } from "../App";
-import { getFestivals, getAccountData } from '../utils/apiService'; // getAccountDataをインポート
+import { getFestivals } from '../utils/apiService'; // getAccountDataを削除
 import useApiData from '../hooks/useApiData'; // useApiDataフックをインポート
 import { initGoogleTranslate } from "../utils/translate";
 import FestivalCalendar from "../components/FestivalCalendar";
 import FestivalMap from '../components/FestivalMap';
 import FestivalRegistrationForm from "../components/FestivalRegistrationForm"; // 登録フォームをインポート
-import { useNavigate } from "react-router-dom";
 
 export default function Festival() {
-  const navigate = useNavigate();  // ← ★ここに追加！
-
-  const { user } = useContext(UserContext);
-
-
   // --- APIからデータを取得 ---
   const { data: festivals, loading: festivalsLoading, error: festivalsError, refetch: refetchFestivals } = useApiData(getFestivals);
-  const { data: accountData, loading: accountLoading, error: accountError } =
-  useApiData(
-    user ? getAccountData : async () => ({ data: null }), // ← 未ログインではAPIを呼ばない
-    [user?.id]
-  );
-
-  // 未ログインチェック機能
-  const requireLogin = () => {
-    if (!user) {
-      const confirmed = window.confirm("この機能を使うにはログインが必要です。\nログインページへ移動しますか？");
-      if (confirmed) {
-        navigate("/login");
-      }
-      return false;  // ← ログインしてないので、処理は中断
-    }
-    return true; // ログイン済み
-  };
 
   // --- Stateの定義 ---
   const [viewMode, setViewMode] = useState('list'); // 'list', 'calendar', 'map', 'register'
@@ -113,8 +89,7 @@ export default function Festival() {
   }, [festivals, sortBy, filterMonth, filterArea]);
 
   // SegmentedControlのデータをuseMemoでメモ化
-  const segmentData = useMemo(() => {
-    const baseData = [
+  const segmentData = useMemo(() => [
       {
         value: 'list',
         label: (
@@ -142,13 +117,7 @@ export default function Festival() {
           </Center>
         ),
       },
-    ];
-    // rootユーザーの場合のみ「登録」タブを追加
-    if (user && user.username === 'root') {
-      baseData.push({ label: '登録', value: 'register' });
-    }
-    return baseData;
-  }, [user]); // userの状態が変わったときに再計算
+    ], []);
 
   if (error) {
     return <Container><Alert color="red" title="エラー">🚨 {error.message || 'データの読み込み中にエラーが発生しました。'}</Alert></Container>;
