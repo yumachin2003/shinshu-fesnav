@@ -119,19 +119,7 @@ export default function Login() {
       >
         LINEでログイン
       </Button>
-      <form
-        action="https://appleid.apple.com/auth/authorize"
-        method="POST"
-      >
-        <input type="hidden" name="response_type" value="code id_token" />
-        <input type="hidden" name="client_id" value="com.example.app" />
-        <input type="hidden" name="redirect_uri" value="http://localhost:5051/api/auth/apple/callback" />
-        <input type="hidden" name="scope" value="name email" />
-        <input type="hidden" name="response_mode" value="form_post" />
-        <Button fullWidth mt="md" color="dark">
-          🍎 Appleでログイン
-        </Button>
-      </form>
+      
       <Text c="dimmed" size="sm" ta="center" mt={5}>
         アカウントをお持ちでないですか？{' '}
         <Anchor size="sm" component={Link} to="/register">新規登録</Anchor>
