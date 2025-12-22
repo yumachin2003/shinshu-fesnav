@@ -44,7 +44,7 @@ def create_app():
         LINE_CHANNEL_SECRET=os.getenv("REACT_APP_LINE_CHANNEL_SECRET"),
         LINE_REDIRECT_URI=os.getenv("REACT_APP_LINE_REDIRECT_URI"),
 
-        FRONTEND_URL=os.getenv("FRONTEND_URL"),
+        BASE_URL=os.getenv("BASE_URL"),
     )
 
     # --- Extensions Init ---

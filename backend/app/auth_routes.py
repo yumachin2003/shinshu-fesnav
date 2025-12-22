@@ -69,7 +69,7 @@ def google_callback():
 
 
     # ⑤ フロントへ token を渡す
-    frontend_url = current_app.config["FRONTEND_URL"]
+    frontend_url = current_app.config["BASE_URL"]
     return redirect(f"{frontend_url}/login?token={token}")
 
 @auth_bp.route("/line")
@@ -148,7 +148,7 @@ def line_callback():
         algorithm="HS256",
     )
 
-    frontend_url = current_app.config["FRONTEND_URL"]
+    frontend_url = current_app.config["BASE_URL"]
     return redirect(f"{frontend_url}/login?token={token}")
 
 @auth_bp.route("/apple/callback", methods=["POST"])
@@ -204,5 +204,5 @@ def apple_callback():
         algorithm="HS256",
     )
 
-    frontend_url = current_app.config["FRONTEND_URL"]
+    frontend_url = current_app.config["BASE_URL"]
     return redirect(f"{frontend_url}/login?token={token}")
