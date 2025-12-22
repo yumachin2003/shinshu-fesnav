@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import { Link } from 'react-router-dom'; // Linkをインポートして詳細ページへのリンクを追加
-import { Text, Button, Group, Paper, Title, List, ScrollArea, Box, TextInput } from '@mantine/core';
+import { Text, Button, Group, Paper, Title, List, ScrollArea, TextInput } from '@mantine/core';
 import { IconCurrentLocation, IconMapPin, IconSearch } from '@tabler/icons-react';
 import L from 'leaflet';
 
