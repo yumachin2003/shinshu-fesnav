@@ -32,6 +32,7 @@ python-dotenv = "*"
 python-dateutil = "*"
 pymysql = "*"
 mysql-connector-python = "*"
+requests = "*"
 
 [dev-packages]
 
