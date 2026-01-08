@@ -5,6 +5,7 @@ from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from dotenv import load_dotenv
+from sqlalchemy import create_engine, text
 
 # .env を読み込む
 load_dotenv()
@@ -28,8 +29,26 @@ def create_app():
     app = Flask(__name__, **app_kwargs)
 
     # --- ✅ Basic Config（ここが重要） ---
+    mysql_url = os.getenv("DATABASE_URL")
+    # instanceフォルダ内のSQLiteパスを解決
+    if not os.path.exists(app.instance_path):
+        os.makedirs(app.instance_path)
+    sqlite_url = f"sqlite:///{os.path.join(app.instance_path, 'fesData.db')}"
+
+    # MySQLへの接続試行
+    use_mysql = False
+    if mysql_url:
+        try:
+            # タイムアウトを短めに設定して接続確認
+            temp_engine = create_engine(mysql_url, connect_args={"connect_timeout": 5})
+            with temp_engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            use_mysql = True
+        except Exception:
+            app.logger.warning("MySQL connection failed. Falling back to SQLite.")
+
     app.config.from_mapping(
-        SQLALCHEMY_DATABASE_URI=os.getenv("DATABASE_URL", "sqlite:///fesData.db"),
+        SQLALCHEMY_DATABASE_URI=mysql_url if use_mysql else sqlite_url,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
 
         SECRET_KEY=os.getenv("SECRET_KEY"),
@@ -39,7 +58,7 @@ def create_app():
         GOOGLE_CLIENT_SECRET=os.getenv("REACT_APP_GOOGLE_CLIENT_SECRET"),
         GOOGLE_REDIRECT_URI=os.getenv("REACT_APP_GOOGLE_REDIRECT_URI"),
 
-        # LINE ★追加
+        # LINE
         LINE_CHANNEL_ID=os.getenv("REACT_APP_LINE_CHANNEL_ID"),
         LINE_CHANNEL_SECRET=os.getenv("REACT_APP_LINE_CHANNEL_SECRET"),
         LINE_REDIRECT_URI=os.getenv("REACT_APP_LINE_REDIRECT_URI"),
@@ -79,8 +98,40 @@ def create_app():
                 else:
                     return send_from_directory(app.static_folder, "index.html")
 
-        # --- DB Creation ---
+        # --- DB Creation & Sync Logic ---
+        # 現在のメインDB（MySQL or SQLite）のテーブルを作成
         db.create_all()
 
+        # MySQL接続時はSQLite側も最新の構造に更新し、データを同期する
+        if use_mysql:
+            try:
+                from .models import Festivals
+                sqlite_engine = create_engine(sqlite_url)
+                
+                # 1. SQLite側のスキーマを最新にする（カラム不足エラー防止）
+                db.metadata.create_all(bind=sqlite_engine)
+
+                # 2. MySQLから最新データを取得してSQLiteに保存
+                festivals = Festivals.query.all()
+                if festivals:
+                    with sqlite_engine.connect() as sqlite_conn:
+                        # トランザクションで一括更新
+                        with sqlite_conn.begin():
+                            # 一旦SQLite側のデータをクリア
+                            sqlite_conn.execute(Festivals.__table__.delete())
+                            
+                            # 挿入用データの準備
+                            data_to_sync = []
+                            for f in festivals:
+                                # モデルの各カラムの値を抽出
+                                row = {c.name: getattr(f, c.name) for c in Festivals.__table__.columns}
+                                data_to_sync.append(row)
+                            
+                            if data_to_sync:
+                                sqlite_conn.execute(Festivals.__table__.insert(), data_to_sync)
+                    
+                    app.logger.info(f"Successfully synced {len(festivals)} festivals to local SQLite.")
+            except Exception as e:
+                app.logger.error(f"Data sync failed: {e}")
 
     return app
