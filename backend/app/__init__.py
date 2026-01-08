@@ -98,40 +98,53 @@ def create_app():
                 else:
                     return send_from_directory(app.static_folder, "index.html")
 
-        # --- DB Creation & Sync Logic ---
+    # --- カスタムコマンド: flask sync-db ---
+    @app.cli.command("sync-db")
+    def sync_db():
+        """MySQLからローカルSQLiteへデータを同期する"""
+        if not use_mysql:
+            print("エラー: DATABASE_URLが設定されていないか、MySQLに接続できません。")
+            return
+
+        try:
+            from .models import Festivals, User, UserFavorite, UserDiary, EditLog, Review, InformationSubmission
+            sqlite_engine = create_engine(sqlite_url)
+            
+            print("SQLiteのスキーマを更新中...")
+            db.metadata.create_all(bind=sqlite_engine)
+
+            # 同期するモデルのリスト
+            models = [Festivals, User, UserFavorite, UserDiary, EditLog, Review, InformationSubmission]
+            
+            with sqlite_engine.connect() as sqlite_conn:
+                with sqlite_conn.begin():
+                    for model in models:
+                        print(f"同期中: {model.__tablename__}...")
+                        items = model.query.all()
+                        
+                        # SQLite側の既存データを削除して入れ替え
+                        sqlite_conn.execute(model.__table__.delete())
+                        
+                        data_to_sync = []
+                        for item in items:
+                            row = {c.name: getattr(item, c.name) for c in model.__table__.columns}
+                            data_to_sync.append(row)
+                        
+                        if data_to_sync:
+                            sqlite_conn.execute(model.__table__.insert(), data_to_sync)
+            
+            print("同期が完了しました！ instance/fesData.db が更新されました。")
+        except Exception as e:
+            print(f"同期失敗: {e}")
+
+    # --- DB Initialization ---
+    with app.app_context():
         # 現在のメインDB（MySQL or SQLite）のテーブルを作成
         db.create_all()
-
-        # MySQL接続時はSQLite側も最新の構造に更新し、データを同期する
+        
         if use_mysql:
-            try:
-                from .models import Festivals
-                sqlite_engine = create_engine(sqlite_url)
-                
-                # 1. SQLite側のスキーマを最新にする（カラム不足エラー防止）
-                db.metadata.create_all(bind=sqlite_engine)
-
-                # 2. MySQLから最新データを取得してSQLiteに保存
-                festivals = Festivals.query.all()
-                if festivals:
-                    with sqlite_engine.connect() as sqlite_conn:
-                        # トランザクションで一括更新
-                        with sqlite_conn.begin():
-                            # 一旦SQLite側のデータをクリア
-                            sqlite_conn.execute(Festivals.__table__.delete())
-                            
-                            # 挿入用データの準備
-                            data_to_sync = []
-                            for f in festivals:
-                                # モデルの各カラムの値を抽出
-                                row = {c.name: getattr(f, c.name) for c in Festivals.__table__.columns}
-                                data_to_sync.append(row)
-                            
-                            if data_to_sync:
-                                sqlite_conn.execute(Festivals.__table__.insert(), data_to_sync)
-                    
-                    app.logger.info(f"Successfully synced {len(festivals)} festivals to local SQLite.")
-            except Exception as e:
-                app.logger.error(f"Data sync failed: {e}")
+            # MySQL接続時はSQLite側のスキーマも最新にする（カラム不足エラー防止）
+            sqlite_engine = create_engine(sqlite_url)
+            db.metadata.create_all(bind=sqlite_engine)
 
     return app
