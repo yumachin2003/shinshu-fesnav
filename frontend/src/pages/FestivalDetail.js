@@ -12,7 +12,7 @@ import {
   Paper,
   Stack, AspectRatio,
 } from "@mantine/core";
-import { IconCalendar, IconMapPin, IconRoad, IconUsers } from '@tabler/icons-react';
+import { IconCalendar, IconMapPin, IconRoad, IconUsers, IconEdit } from '@tabler/icons-react';
 import Favorite from "../utils/Favorite";
 import { UserContext } from "../App";
 import {
@@ -102,9 +102,18 @@ export default function FestivalDetail() {
 
   return (
     <Container>
-      <Button component={Link} to="/festivals" variant="outline" mb="lg">
-        ← お祭り一覧に戻る
-      </Button>
+      <Group justify="space-between" mb="lg">
+        <Button component={Link} to="/festivals" variant="outline">
+          ← お祭り一覧に戻る
+        </Button>
+        <Button
+          variant="light"
+          leftSection={<IconEdit size={16} />}
+          onClick={() => setOpen(true)}
+        >
+          情報提供
+        </Button>
+      </Group>
 
       {/* フェスティバル情報カード */}
       <Card shadow="sm" padding="lg" radius="md" withBorder>
@@ -118,8 +127,21 @@ export default function FestivalDetail() {
           </AspectRatio>
         </Card.Section>
 
-        <Title order={2}>{festival.name}</Title>
-
+        <Group justify="space-between" align="center" mb="md" wrap="nowrap">
+          <Title order={2} style={{ flex: 1 }} fz="1.8rem">{festival.name}</Title>
+          <Stack gap={0} align="center">
+            <Favorite
+              selected={favorites[id]}
+              onToggle={() => {
+                const updated = { ...favorites, [id]: !favorites[id] };
+                saveFavorites(updated);
+              }}
+            />
+            <Text size="xs" fw={700} lh={1}>
+              {festival.favorites || 0}
+            </Text>
+          </Stack>
+        </Group>
 
         {/* --- お祭りの基本情報 --- */}
         <Stack mt="md">
@@ -148,26 +170,8 @@ export default function FestivalDetail() {
             location={festival.location}
             date={festival.date}
           />
-
-          <Favorite
-            selected={favorites[id]}
-            onToggle={() => {
-              const updated = { ...favorites, [id]: !favorites[id] };
-              saveFavorites(updated);
-            }}
-          />
-          <Text size="sm" style={{ alignSelf: 'center' }}>お気に入り数: {festival.favorites || 0}</Text>
         </Group>
       </Card>
-
-      <Button
-        fullWidth
-        mt="xl"
-        variant="light"
-        onClick={() => setOpen(true)}
-      >
-        📝 情報を提供する
-      </Button>
 
       {/* ★ 情報提供モーダル */}
       <InformationModal
