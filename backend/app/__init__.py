@@ -52,6 +52,8 @@ def create_app():
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
 
         SECRET_KEY=os.getenv("SECRET_KEY"),
+        SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_HTTPONLY=True,
 
         # Google
         GOOGLE_CLIENT_ID=os.getenv("REACT_APP_GOOGLE_CLIENT_ID"),
@@ -71,15 +73,14 @@ def create_app():
     migrate.init_app(app, db)
     bcrypt.init_app(app)
 
-    if not is_production:
-        # 開発用に /api/* すべてのオリジンとメソッドを許可
-        CORS(
-            app,
-            resources={r"/api/*": {"origins": "*"}},  # localhost:3000 以外も許可
-            supports_credentials=True,
-            allow_headers=["Content-Type", "Authorization"],
-            methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],  # PATCH も追加
-        )
+    # 外部DBや外部サーバー利用時は、フロントエンドからのクロスオリジンリクエストを常に許可する
+    CORS(
+        app,
+        resources={r"/api/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}},
+        supports_credentials=True,
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    )
 
     with app.app_context():
         from . import api_routes
@@ -107,14 +108,14 @@ def create_app():
             return
 
         try:
-            from .models import Festivals, User, UserFavorite, UserDiary, EditLog, Review, InformationSubmission
+            from .models import Festivals, User, UserFavorite, UserDiary, EditLog, Review, InformationSubmission, Passkey
             sqlite_engine = create_engine(sqlite_url)
             
             print("SQLiteのスキーマを更新中...")
-            db.metadata.create_all(bind=sqlite_engine)
+            db.metadata.create_all(sqlite_engine)
 
             # 同期するモデルのリスト
-            models = [Festivals, User, UserFavorite, UserDiary, EditLog, Review, InformationSubmission]
+            models = [Festivals, User, UserFavorite, UserDiary, EditLog, Review, InformationSubmission, Passkey]
             
             with sqlite_engine.connect() as sqlite_conn:
                 with sqlite_conn.begin():
@@ -145,6 +146,6 @@ def create_app():
         if use_mysql:
             # MySQL接続時はSQLite側のスキーマも最新にする（カラム不足エラー防止）
             sqlite_engine = create_engine(sqlite_url)
-            db.metadata.create_all(bind=sqlite_engine)
+            db.metadata.create_all(sqlite_engine)
 
     return app

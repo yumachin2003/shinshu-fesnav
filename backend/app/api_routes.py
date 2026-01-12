@@ -1,13 +1,15 @@
-from flask import Blueprint, request, jsonify, current_app, g
-from .models import Festivals, User, UserFavorite, UserDiary, EditLog, Review,  InformationSubmission
-from datetime import datetime, timedelta
+from flask import Blueprint, request, jsonify, current_app, g, session
+from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey
+from datetime import datetime, timedelta, timezone
 from . import db
 from .utils import calculate_concrete_date # 日付計算ユーティリティをインポート
 import jwt as pyjwt
-import datetime
 from functools import wraps
 import requests
 from urllib.parse import urlencode
+import base64
+import webauthn
+import json
 
 # 'api'という名前でBlueprintを作成
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -21,16 +23,20 @@ def token_required(f):
             token = request.headers['Authorization'].split(" ")[1]
 
         if not token:
-            return jsonify({'message': 'トークンがありません。認証が必要です。'}), 401
+            return jsonify({'error': 'トークンがありません。認証が必要です。'}), 401
 
         try:
             data = pyjwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             current_user = User.query.filter_by(id=data['user_id']).first()
+            if not current_user:
+                return jsonify({'error': 'ユーザーが見つかりません。'}), 401
             g.current_user = current_user
         except pyjwt.ExpiredSignatureError:
-            return jsonify({'message': 'トークンの有効期限が切れています。再ログインしてください。'}), 401
+            return jsonify({'error': 'トークンの有効期限が切れています。再ログインしてください。'}), 401
         except pyjwt.InvalidTokenError:
-            return jsonify({'message': '無効なトークンです。'}), 401
+            return jsonify({'error': '無効なトークンです。'}), 401
+        except Exception as e:
+            return jsonify({'error': f'認証エラー: {str(e)}'}), 401
 
         return f(*args, **kwargs)
     return decorated
@@ -47,7 +53,6 @@ def test_connection():
 # GET /api/festivals : 全てのお祭りを取得
 @api_bp.route('/festivals', methods=['GET'])
 def get_festivals():
-    current_year = datetime.datetime.now().year
     # 必要なカラムのみを明示的に取得する
     festivals_query = db.session.query(
         Festivals.id,
@@ -94,7 +99,7 @@ def add_festival():
         # 既に存在する場合は情報を更新する (Upsert)
         if data.get('date'):
             try:
-                existing_festival.date = datetime.datetime.strptime(data['date'], '%Y-%m-%d').date()
+                existing_festival.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
             except (ValueError, TypeError):
                 pass
 
@@ -111,7 +116,7 @@ def add_festival():
     fes_date = None
     try:
         if data.get('date'):
-            fes_date = datetime.datetime.strptime(data['date'], '%Y-%m-%d').date()
+            fes_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
     except (ValueError, TypeError):
         # dateが空文字列やNoneの場合も考慮
         pass
@@ -144,7 +149,6 @@ def delete_festival(festival_id):
 
     # 関連データの削除
     UserFavorite.query.filter_by(festival_id=festival_id).delete()
-    UserDiary.query.filter_by(festival_id=festival_id).delete()
     Review.query.filter_by(festival_id=festival_id).delete()
     
     db.session.delete(festival)
@@ -225,7 +229,7 @@ def login():
         # JWTトークンを生成
         token = pyjwt.encode({
             'user_id': user.id,
-            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24) # トークンの有効期限は24時間
+            'exp': datetime.now(timezone.utc) + timedelta(hours=24) # トークンの有効期限は24時間
         }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
         # フロントエンドが期待する形式でレスポンスを返す
@@ -248,17 +252,8 @@ def get_account_data():
     favorites_list = UserFavorite.query.filter_by(user_id=user_id).all()
     favorites = {str(fav.festival_id): True for fav in favorites_list}
 
-    # 日記データの取得
-    diaries_list = UserDiary.query.filter_by(user_id=user_id).order_by(UserDiary.timestamp.desc()).all()
-    diaries = {}
-    for entry in diaries_list:
-        if entry.festival_id not in diaries:
-            diaries[entry.festival_id] = []
-        diaries[entry.festival_id].append(entry.to_dict())
-
     return jsonify({
         'favorites': favorites,
-        'diaries': diaries
     }), 200
 
 # POST /api/account/favorites : お気に入り情報を更新
@@ -285,36 +280,215 @@ def update_favorites():
     db.session.commit()
     return jsonify({'message': 'Favorites updated successfully'}), 200
 
-# POST /api/account/diaries : 日記情報を更新
-@api_bp.route('/account/diaries', methods=['POST'])
+# PATCH /api/account/profile : プロフィール情報（ユーザー名・パスワード）を更新
+@api_bp.route('/account/profile', methods=['PATCH'])
 @token_required
-def update_diaries():
-    user_id = g.current_user.id
+def update_profile():
+    user = g.current_user
     data = request.get_json()
-    new_diaries_data = data.get('diaries', {})
 
-    # 既存の日記をすべて削除
-    UserDiary.query.filter_by(user_id=user_id).delete()
+    new_username = data.get('username')
+    new_password = data.get('password')
 
-    # 新しい日記を追加
-    for festival_id_str, entries in new_diaries_data.items():
-        try:
-            festival_id = int(festival_id_str)
-            for entry_data in entries:
-                new_diary = UserDiary(
-                    user_id=user_id,
-                    festival_id=festival_id,
-                    text=entry_data.get('text'),
-                    image=entry_data.get('image'),
-                    timestamp=entry_data.get('timestamp'),
-                    date=entry_data.get('date')
-                )
-                db.session.add(new_diary)
-        except ValueError:
-            return jsonify({'error': f'Invalid festival_id: {festival_id_str}'}), 400
+    if new_username and new_username != user.username:
+        if User.query.filter_by(username=new_username).first():
+            return jsonify({'error': 'このユーザー名は既に使用されています'}), 400
+        user.username = new_username
+        user.display_name = new_username # 表示名も同期させる例
+
+    if new_password:
+        user.set_password(new_password)
 
     db.session.commit()
-    return jsonify({'message': 'Diaries updated successfully'}), 200
+    return jsonify({
+        'message': 'プロフィールを更新しました',
+        'user': {'id': user.id, 'username': user.username, 'display_name': user.display_name}
+    }), 200
+
+# --- Passkey (WebAuthn) API ---
+
+@api_bp.route('/register/options', methods=['POST'])
+def passkey_register_options():
+    # ログイン中ならそのユーザー、未ログインならリクエストのusernameを使用
+    user = None
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith("Bearer "):
+        try:
+            token = auth_header.split(" ")[1]
+            data = pyjwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+            user = User.query.get(data['user_id'])
+        except:
+            pass
+
+    data = request.get_json()
+    username = user.username if user else data.get('username')
+    
+    if not username:
+        return jsonify({"error": "ユーザー名を入力してください"}), 400
+
+    rp_id = request.host.split(':')[0]
+    
+    options = webauthn.generate_registration_options(
+        rp_id=rp_id,
+        rp_name="Shinshu FesNav",
+        user_id=str(user.id if user else username).encode(),
+        user_name=username,
+        user_display_name=username,
+        attestation=webauthn.helpers.structs.AttestationConveyancePreference.NONE,
+        authenticator_selection=webauthn.helpers.structs.AuthenticatorSelectionCriteria(
+            user_verification=webauthn.helpers.structs.UserVerificationRequirement.PREFERRED,
+        ),
+    )
+    
+    # チャレンジをセッションに保存（bytesはJSON化できないのでbase64文字列にする）
+    session['registration_challenge'] = base64.b64encode(options.challenge).decode('utf-8')
+    session['registration_username'] = username
+    
+    return jsonify(json.loads(webauthn.options_to_json(options)))
+
+@api_bp.route('/register/verify', methods=['POST'])
+def passkey_register_verify():
+    reg_data = request.get_json()
+    
+    # ログイン中ユーザーの取得試行
+    user = None
+    auth_header = request.headers.get('Authorization')
+    if auth_header and auth_header.startswith("Bearer "):
+        try:
+            token = auth_header.split(" ")[1]
+            data = pyjwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
+            user = User.query.get(data['user_id'])
+        except:
+            pass
+
+    challenge_b64 = session.get('registration_challenge')
+    
+    if not challenge_b64:
+        return jsonify({"error": "チャレンジが見つかりません。もう一度やり直してください。"}), 400
+    
+    rp_id = request.host.split(':')[0]
+    origin = request.headers.get('Origin')
+
+    try:
+        verification = webauthn.verify_registration_response(
+            credential=reg_data,
+            expected_challenge=base64.b64decode(challenge_b64),
+            expected_rp_id=rp_id,
+            expected_origin=origin,
+        )
+        
+        # 重複チェック
+        if Passkey.query.filter_by(credential_id=reg_data.get('id')).first():
+            return jsonify({"error": "このパスキーは既に登録されています"}), 400
+
+        # 未ログイン（新規登録）の場合、ユーザーを作成
+        if not user:
+            # クライアント側から送られたID（ここではusernameをIDとして使用した想定）
+            username = reg_data.get('response', {}).get('userHandle') # 本来はIDをデコード
+            # 簡易的に、optionsで指定した名前を使用（実際は検証結果から取得）
+            username = session.get('registration_username') or "new_user"
+            user = User(username=username)
+            db.session.add(user)
+            db.session.flush() # IDを確定させる
+
+        new_passkey = Passkey(
+            user_id=user.id,
+            credential_id=reg_data.get('id'), # Base64URL文字列として保存
+            public_key=verification.credential_public_key,
+            sign_count=verification.sign_count,
+            transports=json.dumps(reg_data.get('response', {}).get('transports', []))
+        )
+        db.session.add(new_passkey)
+        db.session.commit()
+        
+        session.pop('registration_challenge', None)
+        session.pop('registration_username', None)
+        return jsonify({"status": "ok"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
+
+@api_bp.route('/login/options', methods=['POST'])
+def passkey_login_options():
+    data = request.get_json()
+    username = data.get('username')
+    
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"error": "ユーザーが見つかりません"}), 404
+    
+    passkeys = Passkey.query.filter_by(user_id=user.id).all()
+    if not passkeys:
+        return jsonify({"error": "パスキーが登録されていません"}), 400
+
+    rp_id = request.host.split(':')[0]
+    
+    # 登録済みのクレデンシャルIDをデコードしてリスト化
+    def b64_to_bin(s):
+        return base64.urlsafe_b64decode(s + '=' * (4 - len(s) % 4))
+
+    allow_credentials = [
+        webauthn.helpers.structs.PublicKeyCredentialDescriptor(id=b64_to_bin(pk.credential_id)) 
+        for pk in passkeys
+    ]
+
+    options = webauthn.generate_authentication_options(
+        rp_id=rp_id,
+        allow_credentials=allow_credentials,
+        user_verification=webauthn.helpers.structs.UserVerificationRequirement.PREFERRED,
+    )
+    
+    session['authentication_challenge'] = base64.b64encode(options.challenge).decode('utf-8')
+    session['authentication_username'] = username
+    
+    return jsonify(json.loads(webauthn.options_to_json(options)))
+
+@api_bp.route('/login/verify', methods=['POST'])
+def passkey_login_verify():
+    auth_data = request.get_json()
+    challenge_b64 = session.get('authentication_challenge')
+    username = session.get('authentication_username')
+    
+    if not challenge_b64 or not username:
+        return jsonify({"error": "セッションがタイムアウトしました。もう一度やり直してください。"}), 400
+    
+    user = User.query.filter_by(username=username).first()
+    passkey = Passkey.query.filter_by(credential_id=auth_data.get('id')).first()
+    
+    if not passkey or passkey.user_id != user.id:
+        return jsonify({"error": "無効なパスキーです"}), 400
+
+    rp_id = request.host.split(':')[0]
+    origin = request.headers.get('Origin')
+
+    try:
+        verification = webauthn.verify_authentication_response(
+            credential=auth_data,
+            expected_challenge=base64.b64decode(challenge_b64),
+            expected_rp_id=rp_id,
+            expected_origin=origin,
+            credential_public_key=passkey.public_key,
+            credential_current_sign_count=passkey.sign_count,
+        )
+        
+        # sign_count 更新
+        passkey.sign_count = verification.new_sign_count
+        db.session.commit()
+
+        # JWT発行
+        token = pyjwt.encode({
+            'user_id': user.id,
+            'exp': datetime.now(timezone.utc) + timedelta(hours=24)
+        }, current_app.config['SECRET_KEY'], algorithm="HS256")
+
+        session.pop('authentication_challenge', None)
+        session.pop('authentication_username', None)
+
+        return jsonify({
+            "token": token,
+            "user": { "id": user.id, "username": user.username }
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 400
 
 # --- EditLog API ---
 
@@ -454,7 +628,6 @@ def delete_admin_user(user_id):
 
     # 関連データの削除（外部キー制約エラーを防ぐため）
     UserFavorite.query.filter_by(user_id=user_id).delete()
-    UserDiary.query.filter_by(user_id=user_id).delete()
     Review.query.filter_by(user_id=user_id).delete()
     EditLog.query.filter_by(user_id=user_id).delete()
     

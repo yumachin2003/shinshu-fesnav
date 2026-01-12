@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { TextInput, PasswordInput, Button, Container, Title, Paper, Text, Anchor, Alert, Divider } from '@mantine/core';
-import { startRegistration } from '@simplewebauthn/browser';
-import { IconKeyFilled } from '@tabler/icons-react';
 import { initGoogleTranslate } from "../utils/translate";
 import { registerUser } from "../utils/apiService";
 import BackButton from "../utils/BackButton";
+import PasskeyButton from "../components/PasskeyButton";
 
 export default function Register() {
   const [username, setUsername] = useState("");
@@ -15,7 +14,6 @@ export default function Register() {
   const navigate = useNavigate();
   const location = useLocation();
   const backSteps = location.state?.fromLoginPage ? -2 : -1;
-  const API_BASE = "http://localhost:5000/api";
 
   // ✅ 翻訳機能 初期化（左下に表示）
   useEffect(() => {
@@ -46,41 +44,6 @@ export default function Register() {
     }
   };
 
-  const handlePasskeyRegister = async () => {
-    if (!username) {
-      setError("パスキーを登録するにはユーザー名を入力してください。");
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const resp = await fetch(`${API_BASE}/register/options`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username }),
-      });
-      const options = await resp.json();
-      const regResp = await startRegistration(options);
-      const verifyResp = await fetch(`${API_BASE}/register/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(regResp),
-      });
-
-      if (verifyResp.ok) {
-        alert('パスキーの登録に成功しました！ログインページに移動します。');
-        navigate("/login");
-      } else {
-        throw new Error('パスキーの検証に失敗しました。');
-      }
-    } catch (err) {
-      console.error(err);
-      setError('パスキー登録失敗: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <Container size={420} my={40}>
       {/* 🌐 左下に翻訳ウィジェット */}
@@ -99,16 +62,15 @@ export default function Register() {
 
           <Divider label="または" labelPosition="center" my="lg" />
 
-          <Button 
+          <PasskeyButton
+            action="register"
+            username={username}
             fullWidth 
             variant="outline" 
             color="blue" 
-            onClick={handlePasskeyRegister} 
-            loading={loading}
-            leftSection={<IconKeyFilled size={20} />}
-          >
-            パスキーで登録 (生体認証)
-          </Button>
+            onSuccess={() => { alert('パスキーの登録に成功しました！ログインページに移動します。'); navigate("/login"); }}
+            onError={(err) => setError('パスキー登録失敗: ' + err.message)}
+          />
         </form>
       </Paper>
       <Text c="dimmed" size="sm" ta="center" mt={5}>

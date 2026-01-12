@@ -1,12 +1,13 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Container, Title, Text, Button, Group, Card, List, Image, Grid, Tabs, Alert, Textarea } from '@mantine/core';
+import { Container, Title, Text, Button, Group, List, Alert, SegmentedControl, Center, Box, Stack, TextInput, PasswordInput } from '@mantine/core';
 import { UserContext } from "../App";
-import { getFestivals, getAccountData, updateFavorites, updateDiaries, getEditLogs, addEditLogToBackend } from "../utils/apiService";
+import { getFestivals, getAccountData, updateFavorites, getEditLogs, addEditLogToBackend } from "../utils/apiService";
 import useApiData from '../hooks/useApiData';
 import { initGoogleTranslate } from "../utils/translate";
-import { IconLogout } from '@tabler/icons-react';
+import { IconLogout, IconHeart, IconHistory, IconSettings } from '@tabler/icons-react';
 import { useLogout } from "../hooks/useLogout";
+import PasskeyButton from "../components/PasskeyButton";
 
 export default function Account() {
   const { user } = useContext(UserContext);
@@ -38,15 +39,16 @@ export default function Account() {
 
   // --- State ---
   const [favorites, setFavorites] = useState({});
-  const [diaries, setDiaries] = useState({});
   const [editLogs, setEditLogs] = useState([]);
   const [showAllLogs, setShowAllLogs] = useState(false);
+  const [activeTab, setActiveTab] = useState('favorites');
+  const [newUsername, setNewUsername] = useState(user?.display_name || user?.username || "");
+  const [newPassword, setNewPassword] = useState("");
 
   // --- アカウントデータ反映 ---
   useEffect(() => {
     if (accountData) {
       setFavorites(accountData.favorites || {});
-      setDiaries(accountData.diaries || {});
     }
   }, [accountData]);
 
@@ -54,15 +56,16 @@ export default function Account() {
     if (fetchedEditLogs) setEditLogs(fetchedEditLogs);
   }, [fetchedEditLogs]);
 
+  useEffect(() => {
+    if (user) {
+      setNewUsername(user.display_name || user.username || "");
+    }
+  }, [user]);
+
   // --- データ保存関数 ---
   const saveFavorites = async (updated) => {
     setFavorites(updated);
     await updateFavorites(updated).catch(err => console.error("お気に入りの更新に失敗", err));
-  };
-
-  const saveDiaries = async (updated) => {
-    setDiaries(updated);
-    await updateDiaries(updated).catch(err => console.error("日記の更新に失敗", err));
   };
 
   const logout = useLogout();
@@ -73,8 +76,6 @@ export default function Account() {
     try { await addEditLogToBackend(newLogData); refetchEditLogs(); }
     catch (error) { console.error("編集履歴の保存に失敗:", error); }
   };
-
-  const allPhotos = Object.values(diaries).flat(1).filter(e => e.image);
 
   // --- CSV出力 ---
   const handleExportCSV = () => {
@@ -87,6 +88,64 @@ export default function Account() {
     const a = document.createElement("a"); a.href = url; a.download = `festivalEditLogs.csv`; a.click();
     URL.revokeObjectURL(url);
   };
+
+  const handleUpdateProfile = async () => {
+    const token = localStorage.getItem("authToken");
+    const API_BASE = "http://localhost:5051/api";
+    try {
+      const resp = await fetch(`${API_BASE}/account/profile`, {
+        method: 'PATCH',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          username: newUsername,
+          password: newPassword || undefined
+        }),
+      });
+      const result = await resp.json();
+      if (resp.ok) {
+        alert("プロフィールを更新しました");
+        setNewPassword(""); // パスワード入力欄をクリア
+      } else {
+        alert("更新失敗: " + result.error);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("通信エラーが発生しました");
+    }
+  };
+
+  const segmentData = useMemo(() => [
+    {
+      value: 'favorites',
+      label: (
+        <Center>
+          <IconHeart size="1rem" />
+          <Box ml="xs">お気に入り</Box>
+        </Center>
+      ),
+    },
+    {
+      value: 'logs',
+      label: (
+        <Center>
+          <IconHistory size="1rem" />
+          <Box ml="xs">編集履歴</Box>
+        </Center>
+      ),
+    },
+    {
+      value: 'settings',
+      label: (
+        <Center>
+          <IconSettings size="1rem" />
+          <Box ml="xs">設定</Box>
+        </Center>
+      ),
+    },
+  ], []);
 
   // --- ローディング／エラー ---
   if (!user) return <Container><Text>ログイン情報を確認しています...</Text></Container>;
@@ -110,15 +169,16 @@ export default function Account() {
         </Button>
       </Group>
 
-      <Tabs defaultValue="favorites">
-        <Tabs.List>
-          <Tabs.Tab value="favorites">❤️ お気に入り</Tabs.Tab>
-          <Tabs.Tab value="diaries">📔 日記</Tabs.Tab>
-          <Tabs.Tab value="photos">📷 写真アルバム</Tabs.Tab>
-          <Tabs.Tab value="logs">🕒 編集履歴</Tabs.Tab>
-        </Tabs.List>
+      <Group justify="center" mb="xl">
+        <SegmentedControl
+          value={activeTab}
+          onChange={setActiveTab}
+          data={segmentData}
+        />
+      </Group>
 
-        <Tabs.Panel value="favorites" pt="lg">
+      {activeTab === 'favorites' && (
+        <Box pt="lg">
           <List spacing="xs" size="sm" center>
             {Object.entries(favorites).filter(([_, v]) => v).length === 0 && <Text>お気に入りのお祭りはまだありません。</Text>}
             {Object.entries(favorites).filter(([_, v]) => v).map(([fid]) => {
@@ -133,37 +193,11 @@ export default function Account() {
               );
             })}
           </List>
-        </Tabs.Panel>
+        </Box>
+      )}
 
-        <Tabs.Panel value="diaries" pt="lg">
-          {Object.entries(diaries).length === 0 ? <Text>まだ日記はありません。</Text> :
-            Object.entries(diaries).map(([fid, entries]) => entries.map(entry => {
-              const f = festivals.find(x => x.id === Number(fid));
-              return (
-                <Card withBorder p="md" mb="md" key={entry.timestamp}>
-                  <Text fw={500}>{f?.name}</Text>
-                  <Text size="xs" c="dimmed">{entry.date}</Text>
-                  <Textarea value={entry.text} onChange={(e) => {
-                    const updated = { ...diaries };
-                    const idx = updated[fid].findIndex(x => x.timestamp === entry.timestamp);
-                    updated[fid][idx].text = e.target.value;
-                    saveDiaries(updated);
-                    logEditAction(f, "日記内容を編集しました");
-                  }} autosize minRows={2} my="sm" />
-                  {entry.image && <Image src={entry.image} alt="" maw={400} radius="md" my="sm" />}
-                </Card>
-              );
-            }))
-          }
-        </Tabs.Panel>
-
-        <Tabs.Panel value="photos" pt="lg">
-          {allPhotos.length === 0 ? <Text>まだ写真がありません。</Text> :
-            <Grid>{allPhotos.map((e, i) => <Grid.Col span={{ base: 6, sm: 4, md: 3 }} key={i}><Image src={e.image} alt="" radius="md" fit="cover" h={150} /></Grid.Col>)}</Grid>
-          }
-        </Tabs.Panel>
-
-        <Tabs.Panel value="logs" pt="lg">
+      {activeTab === 'logs' && (
+        <Box pt="lg">
           <Group mb="md">
             <Button onClick={() => setShowAllLogs(prev => !prev)} variant="outline">{showAllLogs ? "自分の履歴に戻す" : "全期間の履歴を見る"}</Button>
             <Button onClick={handleExportCSV} variant="light" color="green">CSV形式で出力</Button>
@@ -178,8 +212,35 @@ export default function Account() {
               ))}
             </List>
           }
-        </Tabs.Panel>
-      </Tabs>
+        </Box>
+      )}
+
+      {activeTab === 'settings' && (
+        <Box pt="lg">
+          <Stack maw={400} align="flex-start">
+            <TextInput
+              label="ユーザー名"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.currentTarget.value)}
+            />
+            <PasswordInput
+              label="新しいパスワード"
+              placeholder="変更する場合のみ入力"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.currentTarget.value)}
+            />
+            <Button onClick={handleUpdateProfile}>プロフィールを更新</Button>
+            <PasskeyButton 
+              action="register" 
+              username={user?.username} 
+              variant="outline" 
+              color="blue"
+              onSuccess={() => alert('パスキーの登録に成功しました！')}
+              onError={(err) => alert('パスキー設定失敗: ' + err.message)}
+            >パスキーを設定する</PasskeyButton>
+          </Stack>
+        </Box>
+      )}
     </Container>
   );
 }

@@ -32,7 +32,7 @@ class Festivals(db.Model):
 
 
 class User(db.Model):
-    __tablename__ = "users"  # ★ 明示する（超重要）
+    __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(120), unique=True, nullable=False)
@@ -53,10 +53,16 @@ class User(db.Model):
         if not self.password_hash:
             return False
         return bcrypt.check_password_hash(self.password_hash, password)
-    
-      # ⭐ Apple
-    apple_user_id = db.Column(db.String(255), unique=True, nullable=True)
-    apple_email = db.Column(db.String(255), nullable=True)
+
+class Passkey(db.Model):
+    __tablename__ = "passkeys"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    credential_id = db.Column(db.String(255), unique=True, nullable=False)
+    public_key = db.Column(db.LargeBinary, nullable=False)
+    sign_count = db.Column(db.Integer, default=0)
+    transports = db.Column(db.String(255), nullable=True)
 
 class UserFavorite(db.Model):
     __tablename__ = "user_favorites"
@@ -67,34 +73,6 @@ class UserFavorite(db.Model):
 
     user = db.relationship("User", backref=db.backref("favorites", lazy=True))
     festival = db.relationship("Festivals", backref=db.backref("favorited_by", lazy=True))
-
-
-class UserDiary(db.Model):
-    __tablename__ = "user_diaries"
-
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
-    festival_id = db.Column(db.Integer, db.ForeignKey("festivals.id"), nullable=False)
-
-    text = db.Column(db.Text, nullable=True)
-    image = db.Column(db.Text, nullable=True)
-    timestamp = db.Column(db.BigInteger, nullable=False)
-    date = db.Column(db.String(50), nullable=False)
-
-    user = db.relationship("User", backref=db.backref("diaries", lazy=True))
-    festival = db.relationship("Festivals", backref=db.backref("diaries_for", lazy=True))
-
-    # 🔹 追加: to_dict メソッド
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "festival_id": self.festival_id,
-            "text": self.text,
-            "image": self.image,
-            "timestamp": self.timestamp,
-            "date": self.date
-        }
 
 class EditLog(db.Model):
     __tablename__ = "edit_logs"
@@ -107,6 +85,16 @@ class EditLog(db.Model):
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", backref=db.backref("edit_logs", lazy=True))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_id": self.user_id,
+            "festival_id": self.festival_id,
+            "festival": self.festival_name,  # Account.js の表示に合わせる
+            "content": self.content,
+            "date": self.date.strftime("%Y-%m-%d %H:%M:%S") if self.date else None
+        }
 
 
 class Review(db.Model):
@@ -123,7 +111,17 @@ class Review(db.Model):
     user = db.relationship("User", backref=db.backref("reviews", lazy=True))
     festival = db.relationship("Festivals", backref=db.backref("reviews", lazy=True))
 
-# models.py
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "festival_id": self.festival_id,
+            "user_id": self.user_id,
+            "rating": self.rating,
+            "comment": self.comment,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "username": self.user.username if self.user else "Unknown"
+        }
+
 class InformationSubmission(db.Model):
     __tablename__ = "information_submissions"
 
