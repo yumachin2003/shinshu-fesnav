@@ -1,5 +1,7 @@
 import React, { useState, useContext } from "react";
 import { TextInput, PasswordInput, Button, Stack, Text, Divider, Anchor, Alert } from '@mantine/core';
+import { IconKeyFilled } from '@tabler/icons-react';
+import { startAuthentication } from '@simplewebauthn/browser';
 import { Link } from "react-router-dom";
 import { UserContext } from "../App";
 import { loginUser } from "./apiService";
@@ -12,6 +14,7 @@ export default function LoginForm({ isPopup = false, onSuccess }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const API_BASE = "http://localhost:5000/api";
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -32,6 +35,49 @@ export default function LoginForm({ isPopup = false, onSuccess }) {
     } catch (err) {
       console.error("ログインに失敗しました:", err.response?.data?.error || err.message);
       setError("ユーザー名またはパスワードが違います。");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasskeyLogin = async () => {
+    if (!username) {
+      setError("パスキーでログインするにはユーザー名を入力してください。");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const resp = await fetch(`${API_BASE}/login/options`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username }),
+      });
+      const options = await resp.json();
+      const authResp = await startAuthentication(options);
+      const verifyResp = await fetch(`${API_BASE}/login/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(authResp),
+      });
+
+      if (verifyResp.ok) {
+        const responseData = await verifyResp.json();
+        const { token, user: loggedInUser } = responseData;
+        
+        localStorage.setItem("authToken", token);
+        localStorage.setItem("user", JSON.stringify(loggedInUser));
+        setUser(loggedInUser);
+        
+        if (onSuccess) onSuccess();
+        const targetPath = loggedInUser.username === 'root' ? '/admin/dashboard' : '/festivals';
+        window.location.href = targetPath;
+      } else {
+        throw new Error('認証に失敗しました');
+      }
+    } catch (err) {
+      console.error(err);
+      setError('パスキーログイン失敗: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -99,6 +145,18 @@ export default function LoginForm({ isPopup = false, onSuccess }) {
         <Button fullWidth color="green" size={size} onClick={() => window.location.href = "http://localhost:5051/api/auth/line"}>
           <img src={lineLogo} alt="LINE Logo" style={{ width: isPopup ? 14 : 20, height: isPopup ? 14 : 20, marginRight: 8 }} />
           LINEでログイン
+        </Button>
+
+        <Button 
+          fullWidth 
+          variant="filled" 
+          color="blue" 
+          size={size} 
+          onClick={handlePasskeyLogin} 
+          loading={loading}
+          leftSection={<IconKeyFilled size={isPopup ? 16 : 20} />}
+        >
+          パスキーでログイン
         </Button>
 
         <Text size="xs" ta="center" mt={!isPopup ? 5 : 0}>
