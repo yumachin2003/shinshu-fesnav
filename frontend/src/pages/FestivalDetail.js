@@ -10,7 +10,7 @@ import {
   Button,
   Alert,
   Paper,
-  Stack, AspectRatio,
+  Stack, AspectRatio, Modal,
 } from "@mantine/core";
 import { IconCalendar, IconMapPin, IconRoad, IconUsers, IconEdit } from '@tabler/icons-react';
 import Favorite from "../utils/Favorite";
@@ -32,6 +32,7 @@ export default function FestivalDetail() {
   const { user } = useContext(UserContext);
 
   const [open, setOpen] = useState(false);
+  const [loginModalOpened, setLoginModalOpened] = useState(false);
 
   // APIデータ
   const {
@@ -133,6 +134,10 @@ export default function FestivalDetail() {
             <Favorite
               selected={favorites[id]}
               onToggle={() => {
+                if (!user) {
+                  setLoginModalOpened(true);
+                  return;
+                }
                 const updated = { ...favorites, [id]: !favorites[id] };
                 saveFavorites(updated);
               }}
@@ -179,6 +184,17 @@ export default function FestivalDetail() {
         onClose={() => setOpen(false)}
         festival={festival}
       />
+
+      {/* ログインを促すモーダル */}
+      <Modal opened={loginModalOpened} onClose={() => setLoginModalOpened(false)} title="ログインが必要です" centered>
+        <Text size="sm" mb="lg">
+          お気に入り機能を利用するにはログインが必要です。
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="subtle" onClick={() => setLoginModalOpened(false)}>キャンセル</Button>
+          <Button component={Link} to="/login">ログインページへ</Button>
+        </Group>
+      </Modal>
     </Container>
   );
 }
