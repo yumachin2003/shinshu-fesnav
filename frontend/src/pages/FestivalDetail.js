@@ -25,9 +25,6 @@ import useApiData from "../hooks/useApiData";
 import AddToGoogleCalendarButton from "../components/AddToGoogleCalendarButton";
 import AddToICalendarButton from "../components/AddToICalendarButton";
 
-// ★ コンポーネント化した日記機能
-import { DiaryForm, DiaryList, useDiary } from "../components/Diary";
-
 import InformationModal from "../components/InformationModal";
 
 export default function FestivalDetail() {
@@ -52,21 +49,11 @@ export default function FestivalDetail() {
   // 状態
   const [festival, setFestival] = useState(null);
   const [favorites, setFavorites] = useState({});
-  const [diaries, setDiaries] = useState({});
-
-  // ★ 日記ロジック（コンポーネント化後）
-  const diary = useDiary({
-    user,
-    festival,
-    diaries,
-    setDiaries,
-  });
 
   // アカウントデータをセット
   useEffect(() => {
     if (!accountData) return;
     setFavorites(accountData.favorites || {});
-    setDiaries(accountData.diaries || {});
   }, [accountData]);
 
   // 対象フェスティバル情報を抽出
@@ -173,39 +160,6 @@ export default function FestivalDetail() {
         </Group>
       </Card>
 
-      {/* ★ 日記入力フォーム（別コンポーネント） */}
-      <Paper shadow="xs" p="md" mt="xl" withBorder>
-        <Title order={3} mb="md">
-          日記
-        </Title>
-
-        <DiaryForm
-          newDiary={diary.newDiary}
-          setNewDiary={diary.setNewDiary}
-          newImage={diary.newImage}
-          setNewImage={diary.setNewImage}
-          editing={diary.editing}
-          onSave={diary.handleSaveDiary}
-          onCancel={diary.handleCancelEdit}
-        />
-      </Paper>
-
-      {/* ★ 日記一覧（別コンポーネント） */}
-      {diaries[id] && diaries[id].length > 0 && (
-        <Paper shadow="xs" p="md" mt="xl" withBorder>
-          <Title order={3} mb="md">
-            📔 自分の日記一覧
-          </Title>
-
-          <DiaryList
-            diaries={diaries[id]}
-            onEdit={diary.handleEditDiary}
-            onDelete={(timestamp) =>
-              diary.handleDeleteDiary(id, timestamp)
-            }
-          />
-        </Paper>
-      )}
       <Button
         fullWidth
         mt="xl"
