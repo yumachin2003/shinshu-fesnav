@@ -33,6 +33,7 @@ python-dateutil = "*"
 pymysql = "*"
 mysql-connector-python = "*"
 requests = "*"
+py-webauthn = "*"
 
 [dev-packages]
 
