@@ -1,16 +1,12 @@
-import React, { useState, useContext, useEffect } from "react";
+import React, { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { TextInput, PasswordInput, Button, Container, Title, Paper, Text, Anchor, Alert } from '@mantine/core';
+import { Container, Title, Paper } from '@mantine/core';
 import { UserContext } from "../App";
-import { loginUser } from "../utils/apiService";
 import { initGoogleTranslate } from "../utils/translate";
+import LoginForm from "../utils/LoginForm";
 
 export default function Login() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const { setUser } = useContext(UserContext);
 
   // ✅ 翻訳機能 初期化（左下に表示）
@@ -47,33 +43,6 @@ export default function Login() {
     }
   }, [navigate, setUser]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      // バックエンドのログインAPIにリクエストを送信
-      const response = await loginUser({ username, password });
-
-      // レスポンスからトークンとユーザー情報を取得
-      // バックエンドのレスポンス形式に合わせてキー名（token, user）を調整してください。
-      const { token, user } = response.data;
-
-      // ★'authToken' というキーでトークンをlocalStorageに保存
-      localStorage.setItem("authToken", token);
-      localStorage.setItem("user", JSON.stringify(user)); // ユーザー情報も保存
-      setUser(user); // Appコンテキストのユーザー情報を更新
-      const targetPath = user.username === 'root' ? '/admin/dashboard' : '/festivals';
-      window.location.href = targetPath; // ログイン成功後、リロードを伴って遷移
-    } catch (error) {
-      console.error("ログインに失敗しました:", error.response?.data?.error || error.message);
-      setError("ユーザー名またはパスワードが違います。");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <Container size={420} my={40}>
       {/* 🌐 左下に翻訳ウィジェット */}
@@ -84,47 +53,8 @@ export default function Login() {
       </Title>
 
       <Paper withBorder shadow="md" p={30} mt={30} radius="md">
-        {error && <Alert color="red" title="ログインエラー" mb="md">{error}</Alert>}
-        <form onSubmit={handleSubmit}>
-          <TextInput label="ユーザー名" placeholder="ユーザー名を入力" value={username} onChange={(e) => setUsername(e.target.value)} required />
-          <PasswordInput label="パスワード" placeholder="パスワードを入力" value={password} onChange={(e) => setPassword(e.target.value)} required mt="md" />
-          <Button fullWidth mt="xl" type="submit" loading={loading}>ログイン</Button>
-        </form>
+        <LoginForm />
       </Paper>
-      <Button
-        fullWidth
-        mt="md"
-        variant="outline"
-        color="gray"
-        onClick={() => {
-          const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
-          const redirectUri = process.env.REACT_APP_GOOGLE_REDIRECT_URI;
-          const scope = "openid email profile";
-          const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
-          window.location.href = url;
-        }}
-      >
-        <img
-          src="https://developers.google.com/identity/images/g-logo.png"
-          alt="Google Logo"
-          style={{ width: 20, height: 20, marginRight: 10 }}
-        />
-        Googleでログイン
-      </Button>
-      <Button
-        fullWidth
-        mt="md"
-        color="green"
-        onClick={() => {
-          window.location.href = "http://localhost:5051/api/auth/line";
-        }}
-      >
-        LINEでログイン
-      </Button>
-      <Text c="dimmed" size="sm" ta="center" mt={5}>
-        アカウントをお持ちでないですか？{' '}
-        <Anchor size="sm" href="/register">新規登録</Anchor>
-      </Text>
     </Container>
   );
 }
