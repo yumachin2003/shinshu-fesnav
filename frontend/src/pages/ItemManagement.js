@@ -5,6 +5,7 @@ import { useDisclosure } from '@mantine/hooks';
 import { IconEdit, IconTrash } from '@tabler/icons-react';
 import { getFestivals, deleteFestival } from '../utils/apiService';
 import useApiData from '../hooks/useApiData';
+import BackButton from '../utils/BackButton';
 import FestivalRegistrationForm from '../components/FestivalRegistrationForm';
 
 function ItemManagement() {
@@ -49,8 +50,10 @@ function ItemManagement() {
 
   return (
     <Container>
-      <Title order={1}>お祭り管理</Title>
-
+      <Group justify="space-between" align="center" mb="xl">
+        <Title order={1}>おまつりデータ管理</Title>
+        <BackButton to="/admin/dashboard" variant="outline" />
+      </Group>
       <Group mt="xl">
         <Button onClick={handleAddNew} size="md">新規お祭りを追加</Button>
       </Group>

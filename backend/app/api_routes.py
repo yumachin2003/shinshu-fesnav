@@ -421,3 +421,43 @@ def check_information(info_id):
     info.is_checked = True
     db.session.commit()
     return jsonify(info.to_dict()), 200
+
+# --- Admin User API ---
+
+@api_bp.route('/admin/users', methods=['GET'])
+@token_required
+def get_admin_users():
+    # root ユーザーのみアクセス許可
+    if g.current_user.username != "root":
+        return jsonify({'error': '権限がありません'}), 403
+    
+    users = User.query.all()
+    return jsonify([{
+        'id': u.id,
+        'username': u.username,
+        'display_name': u.display_name
+    } for u in users]), 200
+
+@api_bp.route('/admin/users/<int:user_id>', methods=['DELETE'])
+@token_required
+def delete_admin_user(user_id):
+    # root ユーザーのみアクセス許可
+    if g.current_user.username != "root":
+        return jsonify({'error': '権限がありません'}), 403
+    
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'ユーザーが見つかりません'}), 404
+    
+    if user.username == "root":
+        return jsonify({'error': 'rootユーザー自身を削除することはできません'}), 400
+
+    # 関連データの削除（外部キー制約エラーを防ぐため）
+    UserFavorite.query.filter_by(user_id=user_id).delete()
+    UserDiary.query.filter_by(user_id=user_id).delete()
+    Review.query.filter_by(user_id=user_id).delete()
+    EditLog.query.filter_by(user_id=user_id).delete()
+    
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'message': 'ユーザーを削除しました'}), 200

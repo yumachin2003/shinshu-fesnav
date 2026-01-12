@@ -1,8 +1,11 @@
 import axios from 'axios';
 
+// 開発環境では localhost:5051 を、本番環境は相対パスを使用するように設定します
+const BASE_URL = '/api'; // proxy設定を利用するため /api で固定
+
 // axiosのインスタンスを作成
 const apiClient = axios.create({
-  baseURL: '/api',
+  baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -83,6 +86,15 @@ export const loginUser = (credentials) => {
 
 export const registerUser = (userData) => {
   return apiClient.post('/register', userData);
+};
+
+// Admin User API
+export const getUsers = () => {
+  return apiClient.get('/admin/users');
+};
+
+export const deleteUser = (id) => {
+  return apiClient.delete(`/admin/users/${id}`);
 };
 
 // EditLog API

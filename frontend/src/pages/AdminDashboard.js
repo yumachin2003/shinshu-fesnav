@@ -1,7 +1,7 @@
 import React from 'react';
 import { Container, Title, SimpleGrid, Card, Text, Group, ThemeIcon, Center, Button } from '@mantine/core';
 import { Link } from 'react-router-dom';
-import { IconSettings, IconMessage2, IconLogout } from '@tabler/icons-react';
+import { IconSettings, IconMessage2, IconLogout, IconUsers } from '@tabler/icons-react';
 import { useLogout } from '../hooks/useLogout';
 
 export default function AdminDashboard() {
@@ -26,6 +26,13 @@ export default function AdminDashboard() {
       icon: <IconSettings size="2rem" />,
       link: '/admin/items',
       color: 'blue',
+    },
+    {
+      title: 'ユーザー管理',
+      description: '登録ユーザーの確認や削除を行います。',
+      icon: <IconUsers size="2rem" />,
+      link: '/admin/users',
+      color: 'orange',
     },
     {
       title: '情報提供一覧',

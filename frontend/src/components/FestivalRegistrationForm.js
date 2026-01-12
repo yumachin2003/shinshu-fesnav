@@ -34,7 +34,7 @@ function FestivalRegistrationForm({ onFestivalAdded, festivalData }) {
     } else {
       form.reset();
     }
-  }, [festivalData]);
+  }, [festivalData, form]);
 
   const handleSubmit = async (values) => {
     setLoading(true);

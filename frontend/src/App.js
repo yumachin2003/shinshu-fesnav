@@ -10,20 +10,13 @@ import Festival from "./pages/Festival";
 import Account from "./pages/Account";
 import FestivalDetail from "./pages/FestivalDetail"; // 詳細ページコンポーネントをインポート
 import ItemManagement from "./pages/ItemManagement";
+import UserManagement from "./pages/UserManagement";
 import AdminDashboard from "./pages/AdminDashboard";
 import './App.css'; // アプリケーション全体のスタイルをインポート
 import { getAccountData } from "./utils/apiService";
-import axios from "axios";
 import AccountHoverCard from "./components/AccountHoverCard";
 import InformationDashboard from "./pages/InformationDashboard";
 
-
-// axiosの設定
-// 開発環境では localhost:5051 を、本番環境（ビルド後）は同じドメインの相対パスを参照するようにします
-axios.defaults.baseURL = process.env.NODE_ENV === 'production' ? "" : "http://localhost:5051";
-
-axios.defaults.headers.common["Authorization"] =
-  `Bearer ${localStorage.getItem("authToken")}`;
 
 // ユーザー情報共有のためのContext作成
 export const UserContext = React.createContext();
@@ -127,6 +120,7 @@ export default function App() {
                 {/* 管理者用ルーティング */}
                 <Route path="/admin/dashboard" element={user?.username === "root" ? <AdminDashboard /> : <Navigate to="/" />} />
                 <Route path="/admin/items" element={user?.username === "root" ? <ItemManagement /> : <Navigate to="/" />} />
+                <Route path="/admin/users" element={user?.username === "root" ? <UserManagement /> : <Navigate to="/" />} />
                 <Route path="/admin/info" element={user?.username === "root" ? <InformationDashboard /> : <Navigate to="/" />} />
               </Routes>
 

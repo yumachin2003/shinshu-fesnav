@@ -1,7 +1,6 @@
 import React, { useState, useContext } from "react";
 import { TextInput, PasswordInput, Button, Stack, Text, Divider, Anchor, Alert } from '@mantine/core';
 import { Link } from "react-router-dom";
-import axios from "axios";
 import { UserContext } from "../App";
 import { loginUser } from "./apiService";
 import lineLogo from "../img/line_88.png";
@@ -23,7 +22,6 @@ export default function LoginForm({ isPopup = false, onSuccess }) {
       const { token, user: loggedInUser } = response.data;
       
       localStorage.setItem("authToken", token);
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
       localStorage.setItem("user", JSON.stringify(loggedInUser));
       setUser(loggedInUser);
       

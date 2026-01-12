@@ -1,6 +1,7 @@
-import { Container, Title, Card, Text } from "@mantine/core";
+import { Container, Title, Card, Text, Group } from "@mantine/core";
 import useApiData from "../hooks/useApiData";
 import { getInformationList } from "../utils/apiService";
+import BackButton from '../utils/BackButton';
 
 export default function InformationDashboard() {
   const { data, loading, error } = useApiData(getInformationList);
@@ -10,7 +11,10 @@ export default function InformationDashboard() {
 
   return (
     <Container>
-      <Title order={2} mb="md">情報提供一覧</Title>
+      <Group justify="space-between" align="center" mb="xl">
+        <Title order={1}>情報提供一覧</Title>
+        <BackButton to="/admin/dashboard" variant="outline" />
+      </Group>
 
       {data?.length === 0 && (
         <Text c="dimmed">まだ情報提供はありません</Text>
