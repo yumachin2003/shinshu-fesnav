@@ -1,30 +1,14 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useParams, Link } from "react-router-dom";
-import {
-  Container,
-  Card,
-  Image, // Image をインポート
-  Title,
-  Text,
-  Group,
-  Button,
-  Alert,
-  Paper,
-  Stack, AspectRatio, Modal,
-} from "@mantine/core";
+import { Container, Card, Image, Title, Text, Group, Button, Alert, Paper, Stack, AspectRatio, Modal } from "@mantine/core";
 import { IconCalendar, IconMapPin, IconRoad, IconUsers, IconEdit } from '@tabler/icons-react';
 import Favorite from "../utils/Favorite";
 import { UserContext } from "../App";
-import {
-  getFestivals,
-  getAccountData,
-  updateFavorites,
-} from "../utils/apiService";
-
+import { getFestivals, getAccountData, updateFavorites} from "../utils/apiService";
 import useApiData from "../hooks/useApiData";
+import BackButton from "../utils/BackButton";
 import AddToGoogleCalendarButton from "../components/AddToGoogleCalendarButton";
 import AddToICalendarButton from "../components/AddToICalendarButton";
-
 import InformationModal from "../components/InformationModal";
 
 export default function FestivalDetail() {
@@ -104,9 +88,7 @@ export default function FestivalDetail() {
   return (
     <Container>
       <Group justify="space-between" mb="lg">
-        <Button component={Link} to="/festivals" variant="outline">
-          ← お祭り一覧に戻る
-        </Button>
+        <BackButton variant="outline" />
         <Button
           variant="light"
           leftSection={<IconEdit size={16} />}

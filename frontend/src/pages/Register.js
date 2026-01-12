@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { TextInput, PasswordInput, Button, Container, Title, Paper, Text, Anchor, Alert } from '@mantine/core';
-import { IconArrowLeft } from '@tabler/icons-react';
 import { initGoogleTranslate } from "../utils/translate";
 import { registerUser } from "../utils/apiService";
+import BackButton from "../utils/BackButton";
 
 export default function Register() {
   const [username, setUsername] = useState("");
@@ -11,6 +11,8 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const backSteps = location.state?.fromLoginPage ? -2 : -1;
 
   // ✅ 翻訳機能 初期化（左下に表示）
   useEffect(() => {
@@ -27,7 +29,7 @@ export default function Register() {
       await registerUser({ username, password });
 
       alert("登録が完了しました！ログインページに移動します。");
-      navigate("/"); // 登録成功後、ログインページに遷移
+      navigate("/login"); // 登録成功後、ログインページに遷移
     } catch (error) {
       // バックエンドから返されたエラーメッセージを表示
       if (error.response && error.response.data && error.response.data.error) {
@@ -46,15 +48,7 @@ export default function Register() {
       {/* 🌐 左下に翻訳ウィジェット */}
       <div id="google_translate_element" style={{ position: "fixed", bottom: 10, left: 10, zIndex: 9999 }}></div>
 
-      <Button 
-        variant="subtle" 
-        leftSection={<IconArrowLeft size={16} />} 
-        onClick={() => navigate(-1)}
-        mb="md"
-        pl={0}
-      >
-        戻る
-      </Button>
+      <BackButton to={backSteps} />
 
       <Title ta="center">新規登録</Title>
 

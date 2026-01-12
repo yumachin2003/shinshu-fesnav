@@ -105,7 +105,7 @@ export default function LoginForm({ isPopup = false, onSuccess }) {
 
         <Text size="xs" ta="center" mt={!isPopup ? 5 : 0}>
           アカウントをお持ちでないですか？{' '}
-          <Anchor component={Link} to="/register" size="xs">新規登録</Anchor>
+          <Anchor component={Link} to="/register" state={{ fromLoginPage: !isPopup }} size="xs">新規登録</Anchor>
         </Text>
       </Stack>
     </form>

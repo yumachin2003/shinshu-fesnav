@@ -4,6 +4,8 @@ import { Container, Title, Paper } from '@mantine/core';
 import { UserContext } from "../App";
 import { initGoogleTranslate } from "../utils/translate";
 import LoginForm from "../utils/LoginForm";
+import BackButton from "../utils/BackButton";
+
 
 export default function Login() {
   const navigate = useNavigate();
@@ -47,6 +49,8 @@ export default function Login() {
     <Container size={420} my={40}>
       {/* 🌐 左下に翻訳ウィジェット */}
       <div id="google_translate_element" style={{ position: "fixed", bottom: 10, left: 10, zIndex: 9999 }}></div>
+
+      <BackButton />
 
       <Title ta="center">
         ログイン
