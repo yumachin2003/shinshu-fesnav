@@ -196,6 +196,7 @@ def register():
         return jsonify({'error': 'リクエストボディが不正なJSON形式か空です'}), 400
 
     username = data.get('username')
+    email = data.get('email')
     password = data.get('password')
 
     # バリデーションを最初に行う
@@ -204,8 +205,11 @@ def register():
 
     if User.query.filter_by(username=username).first():
         return jsonify({'error': 'このユーザー名は既に使用されています'}), 400
+    
+    if email and User.query.filter_by(email=email).first():
+        return jsonify({'error': 'このメールアドレスは既に登録されています'}), 400
 
-    new_user = User(username=username)
+    new_user = User(username=username, email=email)
     new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()
@@ -222,20 +226,23 @@ def login():
     if not username or not password:
         return jsonify({'error': 'ユーザー名とパスワードを入力してください'}), 400
 
-    user = User.query.filter_by(username=username).first()
+    # ユーザー名またはメールアドレスで検索
+    user = User.query.filter_by(username=username).first() or User.query.filter_by(email=username).first()
 
     # ユーザーが存在し、かつパスワードが一致するかチェック
     if user and user.check_password(password):
         # JWTトークンを生成
         token = pyjwt.encode({
             'user_id': user.id,
+            'email': user.email,
+            'display_name': user.display_name or user.username,
             'exp': datetime.now(timezone.utc) + timedelta(hours=24) # トークンの有効期限は24時間
         }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
         # フロントエンドが期待する形式でレスポンスを返す
         return jsonify({
             "token": token,
-            "user": { "id": user.id, "username": user.username }
+            "user": { "id": user.id, "username": user.username, "email": user.email, "display_name": user.display_name }
         })
 
     return jsonify({'error': 'ユーザー名またはパスワードが正しくありません'}), 401
@@ -288,6 +295,7 @@ def update_profile():
     data = request.get_json()
 
     new_username = data.get('username')
+    new_email = data.get('email')
     new_password = data.get('password')
 
     if new_username and new_username != user.username:
@@ -296,13 +304,18 @@ def update_profile():
         user.username = new_username
         user.display_name = new_username # 表示名も同期させる例
 
+    if new_email and new_email != user.email:
+        if User.query.filter_by(email=new_email).first():
+            return jsonify({'error': 'このメールアドレスは既に使用されています'}), 400
+        user.email = new_email
+
     if new_password:
         user.set_password(new_password)
 
     db.session.commit()
     return jsonify({
         'message': 'プロフィールを更新しました',
-        'user': {'id': user.id, 'username': user.username, 'display_name': user.display_name}
+        'user': {'id': user.id, 'username': user.username, 'email': user.email, 'display_name': user.display_name}
     }), 200
 
 # --- Passkey (WebAuthn) API ---
@@ -322,6 +335,7 @@ def passkey_register_options():
 
     data = request.get_json()
     username = user.username if user else data.get('username')
+    email = data.get('email')
     
     if not username:
         return jsonify({"error": "ユーザー名を入力してください"}), 400
@@ -336,6 +350,7 @@ def passkey_register_options():
         user_display_name=username,
         attestation=webauthn.helpers.structs.AttestationConveyancePreference.NONE,
         authenticator_selection=webauthn.helpers.structs.AuthenticatorSelectionCriteria(
+            authenticator_attachment=webauthn.helpers.structs.AuthenticatorAttachment.PLATFORM,
             user_verification=webauthn.helpers.structs.UserVerificationRequirement.PREFERRED,
         ),
     )
@@ -343,6 +358,7 @@ def passkey_register_options():
     # チャレンジをセッションに保存（bytesはJSON化できないのでbase64文字列にする）
     session['registration_challenge'] = base64.b64encode(options.challenge).decode('utf-8')
     session['registration_username'] = username
+    session['registration_email'] = email
     
     return jsonify(json.loads(webauthn.options_to_json(options)))
 
@@ -387,7 +403,8 @@ def passkey_register_verify():
             username = reg_data.get('response', {}).get('userHandle') # 本来はIDをデコード
             # 簡易的に、optionsで指定した名前を使用（実際は検証結果から取得）
             username = session.get('registration_username') or "new_user"
-            user = User(username=username)
+            email = session.get('registration_email')
+            user = User(username=username, email=email)
             db.session.add(user)
             db.session.flush() # IDを確定させる
 
@@ -412,7 +429,7 @@ def passkey_login_options():
     data = request.get_json()
     username = data.get('username')
     
-    user = User.query.filter_by(username=username).first()
+    user = User.query.filter_by(username=username).first() or User.query.filter_by(email=username).first()
     if not user:
         return jsonify({"error": "ユーザーが見つかりません"}), 404
     
@@ -438,7 +455,7 @@ def passkey_login_options():
     )
     
     session['authentication_challenge'] = base64.b64encode(options.challenge).decode('utf-8')
-    session['authentication_username'] = username
+    session['authentication_username'] = user.username # 確実に存在するusernameを保存
     
     return jsonify(json.loads(webauthn.options_to_json(options)))
 
@@ -477,6 +494,8 @@ def passkey_login_verify():
         # JWT発行
         token = pyjwt.encode({
             'user_id': user.id,
+            'email': user.email,
+            'display_name': user.display_name or user.username,
             'exp': datetime.now(timezone.utc) + timedelta(hours=24)
         }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
@@ -485,7 +504,7 @@ def passkey_login_verify():
 
         return jsonify({
             "token": token,
-            "user": { "id": user.id, "username": user.username }
+            "user": { "id": user.id, "username": user.username, "email": user.email, "display_name": user.display_name }
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -609,7 +628,8 @@ def get_admin_users():
     return jsonify([{
         'id': u.id,
         'username': u.username,
-        'display_name': u.display_name
+        'display_name': u.display_name,
+        'email': u.email
     } for u in users]), 200
 
 @api_bp.route('/admin/users/<int:user_id>', methods=['DELETE'])

@@ -8,6 +8,7 @@ import PasskeyButton from "../components/PasskeyButton";
 
 export default function Register() {
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -27,7 +28,7 @@ export default function Register() {
 
     try {
       // バックエンドの/api/registerエンドポイントにデータを送信
-      await registerUser({ username, password });
+      await registerUser({ username, email, password });
 
       alert("登録が完了しました！ログインページに移動します。");
       navigate("/login"); // 登録成功後、ログインページに遷移
@@ -57,6 +58,7 @@ export default function Register() {
         {error && <Alert color="red" title="登録エラー" mb="md">{error}</Alert>}
         <form onSubmit={handleSubmit}>
           <TextInput label="ユーザー名" placeholder="ユーザー名を入力" value={username} onChange={(e) => setUsername(e.target.value)} required />
+          <TextInput label="メールアドレス" placeholder="example@mail.com" value={email} onChange={(e) => setEmail(e.target.value)} required mt="md" />
           <PasswordInput label="パスワード" placeholder="パスワードを入力" value={password} onChange={(e) => setPassword(e.target.value)} required mt="md" />
           <Button fullWidth mt="xl" type="submit" loading={loading}>登録</Button>
 

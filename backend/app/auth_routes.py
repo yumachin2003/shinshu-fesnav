@@ -44,15 +44,17 @@ def google_callback():
         return "Failed to get email", 400
 
     # ③ ユーザー作成 or 更新
-    user = User.query.filter_by(username=email).first()
+    user = User.query.filter_by(email=email).first() or User.query.filter_by(username=email).first()
     if not user:
         user = User(
             username=email,
+            email=email,
             display_name=name,
         )
         db.session.add(user)
     else:
         user.display_name = name
+        user.email = email
 
     db.session.commit()
 
@@ -60,6 +62,7 @@ def google_callback():
     token = jwt.encode(
         {
             "user_id": user.id,
+            "email": user.email,
             "display_name": user.display_name,
             "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7),
         },
@@ -103,8 +106,19 @@ def line_callback():
     ).json()
 
     access_token = token_res.get("access_token")
+    id_token = token_res.get("id_token")
     if not access_token:
         return "LINE token exchange failed", 400
+
+    # IDトークンからメールアドレスを取得
+    email = None
+    if id_token:
+        try:
+            # 署名検証は省略（LINEプラットフォームからの直接レスポンスのため）
+            decoded_id_token = jwt.decode(id_token, options={"verify_signature": False})
+            email = decoded_id_token.get("email")
+        except Exception:
+            pass
 
     # ② プロフィール取得
     profile = requests.get(
@@ -121,18 +135,20 @@ def line_callback():
     username = f"line:{line_user_id}"
 
     # ③ ユーザー作成 or 取得
-    user = User.query.filter_by(line_user_id=line_user_id).first()
+    user = User.query.filter_by(line_user_id=line_user_id).first() or (User.query.filter_by(email=email).first() if email else None)
     if not user:
         user = User(
             username=username,
             line_user_id=line_user_id,
             display_name=display_name,
+            email=email,
         )
         user.set_password("line-login")  # ← ★必須
         db.session.add(user)
     
     else:
         user.display_name = display_name
+        if email: user.email = email
 
     db.session.commit()
 
@@ -140,6 +156,7 @@ def line_callback():
     token = jwt.encode(
         {
             "user_id": user.id,
+            "email": user.email,
             "display_name": user.display_name,
             "login_type": "line",
             "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7),

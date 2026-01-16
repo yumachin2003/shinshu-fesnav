@@ -88,6 +88,10 @@ export const registerUser = (userData) => {
   return apiClient.post('/register', userData);
 };
 
+export const updateProfile = (profileData) => {
+  return apiClient.patch('/account/profile', profileData);
+};
+
 // Admin User API
 export const getUsers = () => {
   return apiClient.get('/admin/users');

@@ -68,6 +68,7 @@ function UserManagement() {
             <tr>
               <th>ユーザー名</th>
               <th>表示名</th>
+              <th>メールアドレス</th>
               <th style={{ width: '100px' }}>操作</th>
             </tr>
           </Table.Thead>
@@ -76,6 +77,7 @@ function UserManagement() {
               <Table.Tr key={u.id}>
                 <Table.Td>{u.username}</Table.Td>
                 <Table.Td>{u.display_name || '-'}</Table.Td>
+                <Table.Td>{u.email || '-'}</Table.Td>
                 <Table.Td>
                   <Group gap="xs">
                     {/* rootユーザー自身は削除できないように制御 */}

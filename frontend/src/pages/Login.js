@@ -31,6 +31,7 @@ export default function Login() {
       const userData = {
         id: payload.user_id,
         username: payload.email ?? payload.user_id,
+        email: payload.email,
         display_name: payload.display_name,
         isGoogle: true,
       };

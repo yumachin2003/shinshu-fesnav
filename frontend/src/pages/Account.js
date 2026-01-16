@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container, Title, Text, Button, Group, List, Alert, SegmentedControl, Center, Box, Stack, TextInput, PasswordInput } from '@mantine/core';
 import { UserContext } from "../App";
-import { getFestivals, getAccountData, updateFavorites, getEditLogs, addEditLogToBackend } from "../utils/apiService";
+import { getFestivals, getAccountData, updateFavorites, getEditLogs, addEditLogToBackend, updateProfile } from "../utils/apiService";
 import useApiData from '../hooks/useApiData';
 import { initGoogleTranslate } from "../utils/translate";
 import { IconLogout, IconHeart, IconHistory, IconSettings } from '@tabler/icons-react';
@@ -43,6 +43,7 @@ export default function Account() {
   const [showAllLogs, setShowAllLogs] = useState(false);
   const [activeTab, setActiveTab] = useState('favorites');
   const [newUsername, setNewUsername] = useState(user?.display_name || user?.username || "");
+  const [newEmail, setNewEmail] = useState(user?.email || "");
   const [newPassword, setNewPassword] = useState("");
 
   // --- アカウントデータ反映 ---
@@ -59,6 +60,7 @@ export default function Account() {
   useEffect(() => {
     if (user) {
       setNewUsername(user.display_name || user.username || "");
+      setNewEmail(user.email || "");
     }
   }, [user]);
 
@@ -90,30 +92,17 @@ export default function Account() {
   };
 
   const handleUpdateProfile = async () => {
-    const token = localStorage.getItem("authToken");
-    const API_BASE = "http://localhost:5051/api";
     try {
-      const resp = await fetch(`${API_BASE}/account/profile`, {
-        method: 'PATCH',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          username: newUsername,
-          password: newPassword || undefined
-        }),
+      await updateProfile({
+        username: newUsername,
+        email: newEmail,
+        password: newPassword || undefined
       });
-      const result = await resp.json();
-      if (resp.ok) {
-        alert("プロフィールを更新しました");
-        setNewPassword(""); // パスワード入力欄をクリア
-      } else {
-        alert("更新失敗: " + result.error);
-      }
+      alert("プロフィールを更新しました");
+      setNewPassword(""); // パスワード入力欄をクリア
     } catch (err) {
-      console.error(err);
-      alert("通信エラーが発生しました");
+      console.error("更新失敗:", err);
+      alert("更新に失敗しました: " + (err.response?.data?.error || err.message));
     }
   };
 
@@ -222,6 +211,11 @@ export default function Account() {
               label="ユーザー名"
               value={newUsername}
               onChange={(e) => setNewUsername(e.currentTarget.value)}
+            />
+            <TextInput
+              label="メールアドレス"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.currentTarget.value)}
             />
             <PasswordInput
               label="新しいパスワード"
