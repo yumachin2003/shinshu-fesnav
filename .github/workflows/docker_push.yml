@@ -1,0 +1,98 @@
+name: Build and Push Frontend and Backend
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+
+jobs:
+  # --- バックエンドのジョブ ---
+  backend:
+    if: contains(github.event.head_commit.modified, 'shinshu-fesnav-backend/') || contains(github.event.head_commit.added, 'shinshu-fesnav-backend/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get latest tag and increment
+        id: auto_tag
+        run: |
+          # 1. Docker Hub API 認証
+          HUB_TOKEN=$(curl -s -H "Content-Type: application/json" \
+            -X POST \
+            -d "{\"username\": \"${{ secrets.DOCKERHUB_USERNAME }}\", \"password\": \"${{ secrets.DOCKERHUB_TOKEN }}\"}" \
+            https://hub.docker.com/v2/users/login/ | jq -r .token)
+
+          # 2. 最新タグ取得 (REPO名は適宜変更してね)
+          REPO="${{ secrets.DOCKERHUB_USERNAME }}/shinshu-fesnav-backend"
+          LATEST_TAG=$(curl -s -H "Authorization: Bearer ${HUB_TOKEN}" \
+            "https://hub.docker.com/v2/repositories/${REPO}/tags/?page_size=1" | jq -r '.results[0].name')
+
+          # 3. コミットメッセージの解析
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          
+          # 正規表現で「行頭の v + 数字」を抽出 (例: v1.0: message -> v1.0)
+          if [[ $COMMIT_MSG =~ ^v([0-9.]+) ]]; then
+            NEW_TAG="${BASH_REMATCH[1]}"
+            echo "Custom tag detected: $NEW_TAG"
+          else
+            echo "No version tag found in message. Incrementing from Docker Hub..."
+            if [ "$LATEST_TAG" == "null" ] || [ "$LATEST_TAG" == "latest" ] || [[ ! $LATEST_TAG =~ ^[0-9.]+$ ]]; then
+              NEW_TAG="1.0"
+            else
+              # 最新タグに +0.1
+              NEW_TAG=$(echo "$LATEST_TAG + 0.1" | bc | xargs printf "%.1f")
+            fi
+          fi
+          
+          echo "tag=v${NEW_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./shinshu-fesnav-backend  # フォルダを指定
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/shinshu-fesnav-backend:${{ steps.auto_tag.outputs.tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/shinshu-fesnav-backend:latest
+
+  # --- フロントエンドのジョブ ---
+  frontend:
+    if: contains(github.event.head_commit.modified, 'Shinshu-fesnav-frontend/') || contains(github.event.head_commit.added, 'Shinshu-fesnav-frontend/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get latest tag and increment
+        id: auto_tag
+        run: |
+          REPO="${{ secrets.DOCKERHUB_USERNAME }}/shinshu-fesnav-frontend"
+          LATEST_TAG=$(curl -s "https://hub.docker.com/v2/repositories/${REPO}/tags/?page_size=1" | jq -r '.results[0].name')
+          if [ "$LATEST_TAG" == "null" ] || [ "$LATEST_TAG" == "latest" ] || [[ ! $LATEST_TAG =~ ^[0-9.]+$ ]]; then
+            NEW_TAG="1.0"
+          else
+            NEW_TAG=$(echo "$LATEST_TAG + 0.1" | bc | xargs printf "%.1f")
+          fi
+          echo "tag=${NEW_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend  # フォルダを指定
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/shinshu-fesnav-frontend:${{ steps.auto_tag.outputs.tag }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/shinshu-fesnav-frontend:latest
