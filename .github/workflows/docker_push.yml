@@ -3,9 +3,9 @@ name: Build and Push Frontend and Backend
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'backend/**'
-      - 'frontend/**'
+#    paths:
+#      - 'backend/**'
+#      - 'frontend/**'
 
 jobs:
   # --- バックエンドのジョブ ---
