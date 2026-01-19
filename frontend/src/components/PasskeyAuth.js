@@ -3,7 +3,7 @@ import { startRegistration, startAuthentication } from '@simplewebauthn/browser'
 
 function PasskeyAuth() {
     const [username, setUsername] = useState('');
-    const API_BASE = "http://localhost:5051/api";
+    const API_BASE = "http://localhost:5052/api";
 
     // 新規登録フロー
     const handleRegister = async () => {

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// 開発環境では localhost:5051 を、本番環境は相対パスを使用するように設定します
+// 開発環境では localhost:5052 を、本番環境は相対パスを使用するように設定します
 const BASE_URL = '/api'; // proxy設定を利用するため /api で固定
 
 // axiosのインスタンスを作成

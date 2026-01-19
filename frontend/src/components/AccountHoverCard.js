@@ -2,7 +2,7 @@ import React, { useState, useContext } from "react";
 import { HoverCard, Button, Stack, Text } from '@mantine/core';
 import { Link, useLocation } from "react-router-dom";
 import { UserContext } from "../App";
-import LoginForm from "../utils/LoginForm";
+import AccountForm from "../utils/AccountForm";
 
 export default function AccountHoverCard() {
   const { user, setUser } = useContext(UserContext);
@@ -67,7 +67,7 @@ export default function AccountHoverCard() {
         </Button>
       </HoverCard.Target>
       <HoverCard.Dropdown>
-        <LoginForm isPopup={true} onSuccess={() => setOpened(false)} />
+        <AccountForm isPopup={true} onSuccess={() => setOpened(false)} />
       </HoverCard.Dropdown>
     </HoverCard>
   );

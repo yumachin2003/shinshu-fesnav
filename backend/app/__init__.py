@@ -1,4 +1,5 @@
 import os
+import sys
 from flask import Flask, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -40,11 +41,15 @@ def create_app():
     if mysql_url:
         try:
             # タイムアウトを短めに設定して接続確認
-            temp_engine = create_engine(mysql_url, connect_args={"connect_timeout": 5})
+            temp_engine = create_engine(mysql_url, connect_args={"connect_timeout": 10})
             with temp_engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
             use_mysql = True
-        except Exception:
+        except Exception as e:
+            # マイグレーションコマンド実行時（flask db ...）はSQLiteへのフォールバックを禁止してエラーにする
+            if "db" in sys.argv:
+                app.logger.error(f"MySQL connection failed during migration: {e}")
+                raise e
             app.logger.warning("MySQL connection failed. Falling back to SQLite.")
 
     app.config.from_mapping(
@@ -108,14 +113,14 @@ def create_app():
             return
 
         try:
-            from .models import Festivals, User, UserFavorite, UserDiary, EditLog, Review, InformationSubmission, Passkey
+            from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey
             sqlite_engine = create_engine(sqlite_url)
             
             print("SQLiteのスキーマを更新中...")
             db.metadata.create_all(sqlite_engine)
 
             # 同期するモデルのリスト
-            models = [Festivals, User, UserFavorite, UserDiary, EditLog, Review, InformationSubmission, Passkey]
+            models = [Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey]
             
             with sqlite_engine.connect() as sqlite_conn:
                 with sqlite_conn.begin():
@@ -141,7 +146,8 @@ def create_app():
     # --- DB Initialization ---
     with app.app_context():
         # 現在のメインDB（MySQL or SQLite）のテーブルを作成
-        db.create_all()
+        # マイグレーション（Alembic）で管理するため、アプリ起動時の自動作成は無効化します
+        # db.create_all()
         
         if use_mysql:
             # MySQL接続時はSQLite側のスキーマも最新にする（カラム不足エラー防止）

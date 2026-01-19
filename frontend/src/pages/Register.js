@@ -1,18 +1,11 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, Link, useLocation } from "react-router-dom";
-import { TextInput, PasswordInput, Button, Container, Title, Paper, Text, Anchor, Alert, Divider } from '@mantine/core';
+import React, { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { Container, Title, Paper } from '@mantine/core';
 import { initGoogleTranslate } from "../utils/translate";
-import { registerUser } from "../utils/apiService";
 import BackButton from "../utils/BackButton";
-import PasskeyButton from "../components/PasskeyButton";
+import AccountForm from "../utils/AccountForm";
 
 export default function Register() {
-  const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
   const location = useLocation();
   const backSteps = location.state?.fromLoginPage ? -2 : -1;
 
@@ -20,30 +13,6 @@ export default function Register() {
   useEffect(() => {
     initGoogleTranslate();
   }, []);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-
-    try {
-      // バックエンドの/api/registerエンドポイントにデータを送信
-      await registerUser({ username, email, password });
-
-      alert("登録が完了しました！ログインページに移動します。");
-      navigate("/login"); // 登録成功後、ログインページに遷移
-    } catch (error) {
-      // バックエンドから返されたエラーメッセージを表示
-      if (error.response && error.response.data && error.response.data.error) {
-        setError(error.response.data.error);
-      } else {
-        console.error("Registration failed:", error);
-        setError("登録に失敗しました。後ほどもう一度お試しください。");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <Container size={420} my={40}>
@@ -55,30 +24,8 @@ export default function Register() {
       <Title ta="center">新規登録</Title>
 
       <Paper withBorder shadow="md" p={30} mt={30} radius="md">
-        {error && <Alert color="red" title="登録エラー" mb="md">{error}</Alert>}
-        <form onSubmit={handleSubmit}>
-          <TextInput label="ユーザー名" placeholder="ユーザー名を入力" value={username} onChange={(e) => setUsername(e.target.value)} required />
-          <TextInput label="メールアドレス" placeholder="example@mail.com" value={email} onChange={(e) => setEmail(e.target.value)} required mt="md" />
-          <PasswordInput label="パスワード" placeholder="パスワードを入力" value={password} onChange={(e) => setPassword(e.target.value)} required mt="md" />
-          <Button fullWidth mt="xl" type="submit" loading={loading}>登録</Button>
-
-          <Divider label="または" labelPosition="center" my="lg" />
-
-          <PasskeyButton
-            action="register"
-            username={username}
-            fullWidth 
-            variant="outline" 
-            color="blue" 
-            onSuccess={() => { alert('パスキーの登録に成功しました！ログインページに移動します。'); navigate("/login"); }}
-            onError={(err) => setError('パスキー登録失敗: ' + err.message)}
-          />
-        </form>
+        <AccountForm isRegister={true} />
       </Paper>
-      <Text c="dimmed" size="sm" ta="center" mt={5}>
-        すでにアカウントをお持ちですか？{' '}
-        <Anchor size="sm" component={Link} to="/login">ログイン</Anchor>
-      </Text>
     </Container>
   );
 }

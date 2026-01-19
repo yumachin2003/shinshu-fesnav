@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Container, Title, Paper } from '@mantine/core';
 import { UserContext } from "../App";
 import { initGoogleTranslate } from "../utils/translate";
-import LoginForm from "../utils/LoginForm";
+import AccountForm from "../utils/AccountForm";
 import BackButton from "../utils/BackButton";
 
 
@@ -58,7 +58,7 @@ export default function Login() {
       </Title>
 
       <Paper withBorder shadow="md" p={30} mt={30} radius="md">
-        <LoginForm />
+        <AccountForm />
       </Paper>
     </Container>
   );
