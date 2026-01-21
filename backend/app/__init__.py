@@ -10,6 +10,8 @@ from sqlalchemy import create_engine, text
 
 # .env を読み込む
 load_dotenv()
+# .env.local があれば読み込み、既存の変数を上書き(override)する
+load_dotenv(".env.local", override=True)
 
 db = SQLAlchemy()
 migrate = Migrate()
