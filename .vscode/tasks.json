@@ -1,0 +1,30 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Flask DB Migrate",
+            "type": "shell",
+            "command": "pipenv run flask db migrate -m \"${input:message}\"",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Flask DB Upgrade",
+            "type": "shell",
+            "command": "pipenv run flask db upgrade",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "message",
+            "type": "promptString",
+            "description": "Migration message"
+        }
+    ]
+}
