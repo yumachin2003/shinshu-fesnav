@@ -84,6 +84,18 @@ export const loginUser = (credentials) => {
   return apiClient.post('/login', credentials);
 };
 
+// Google OAuth Login
+// フロントエンドで受け取った code をバックエンドに送信
+export const googleLogin = (authCode) => {
+  return apiClient.post('/auth/google', { code: authCode });
+};
+
+// LINE OAuth Login
+// フロントエンドで受け取った code をバックエンドに送信
+export const lineLogin = (authCode) => {
+  return apiClient.post('/auth/line', { code: authCode });
+};
+
 export const registerUser = (userData) => {
   return apiClient.post('/register', userData);
 };

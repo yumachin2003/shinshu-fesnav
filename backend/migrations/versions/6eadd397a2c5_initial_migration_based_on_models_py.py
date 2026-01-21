@@ -8,6 +8,7 @@ Create Date: 2026-01-19 17:50:48.655959
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
+from sqlalchemy import inspect
 
 # revision identifiers, used by Alembic.
 revision = '6eadd397a2c5'
@@ -30,10 +31,15 @@ def upgrade():
     # 既存データの修正: 空文字のemailをNULLに変換してユニーク制約違反を防ぐ
     op.execute("UPDATE users SET email = NULL WHERE email = ''")
 
+    # カラムの存在確認
+    bind = op.get_bind()
+    inspector = inspect(bind)
+    columns = [c['name'] for c in inspector.get_columns('users')]
+
     with op.batch_alter_table('users', schema=None) as batch_op:
-        batch_op.create_unique_constraint(None, ['email'])
-        batch_op.drop_column('name')
-        batch_op.drop_column('password')
+        batch_op.create_unique_constraint('uq_users_email', ['email'])
+        if 'password' in columns:
+            batch_op.drop_column('password')
 
     # ### end Alembic commands ###
 
@@ -43,7 +49,7 @@ def downgrade():
     with op.batch_alter_table('users', schema=None) as batch_op:
         batch_op.add_column(sa.Column('password', mysql.VARCHAR(length=255), nullable=True))
         batch_op.add_column(sa.Column('name', mysql.VARCHAR(length=100), nullable=True))
-        batch_op.drop_constraint(None, type_='unique')
+        batch_op.drop_constraint('uq_users_email', type_='unique')
         batch_op.alter_column('email',
                existing_type=mysql.VARCHAR(length=120),
                nullable=False)
