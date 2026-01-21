@@ -6,7 +6,6 @@ from .utils import calculate_concrete_date # 日付計算ユーティリティ�
 import jwt as pyjwt
 from functools import wraps
 import requests
-from urllib.parse import urlencode
 import base64
 import webauthn
 import json
@@ -545,27 +544,6 @@ def add_edit_log():
     db.session.add(new_log)
     db.session.commit()
     return jsonify(new_log.to_dict()), 201
-
-# --- Google OAuth ---
-
-@api_bp.route("/auth/google", methods=["GET"])
-def google_login():
-    client_id = current_app.config["GOOGLE_CLIENT_ID"]
-    redirect_uri = current_app.config["GOOGLE_REDIRECT_URI"]
-
-    scope = "openid email profile"
-
-    params = {
-        "client_id": client_id,
-        "redirect_uri": redirect_uri,
-        "response_type": "code",
-        "scope": scope,
-        "access_type": "offline",
-        "prompt": "consent",
-    }
-
-    auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
-    return jsonify({"url": auth_url})
 
 @api_bp.route("/information", methods=["POST"])
 def submit_information():

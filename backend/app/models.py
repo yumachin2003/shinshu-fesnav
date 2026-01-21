@@ -49,6 +49,9 @@ class User(db.Model):
     # ⭐ LINEログイン用
     line_user_id = db.Column(db.String(255), unique=True, nullable=True)
 
+    # ⭐ Googleログイン用
+    google_user_id = db.Column(db.String(255), unique=True, nullable=True)
+
     def set_password(self, password):
         self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
 
