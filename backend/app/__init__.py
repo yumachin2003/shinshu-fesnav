@@ -7,15 +7,19 @@ from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
+from flask_mailman import Mail
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
-# .env を読み込む
-load_dotenv()
-# .env.local があれば読み込み、既存の変数を上書き(override)する
-load_dotenv(".env.local", override=True)
+# 環境変数読み込み
+load_dotenv(".env.local")
+load_dotenv(".env", override=True)
 
 db = SQLAlchemy()
 migrate = Migrate()
 bcrypt = Bcrypt()
+mail = Mail()
+limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"], storage_uri="memory://")
 
 def create_app():
     """Application-factory function"""
@@ -31,9 +35,20 @@ def create_app():
 
     app = Flask(__name__, **app_kwargs)
 
-    # --- ✅ Basic Config（ここが重要） ---
+    # --- Basic Config ---
     mysql_url = os.getenv("DATABASE_URL")
-    # instanceフォルダ内のSQLiteパスを解決
+
+    # DATABASE_URLが設定されていない（または空の）場合、個別の環境変数から構築を試みる
+    if not mysql_url:
+        db_user = os.getenv("MYSQL_USER")
+        db_password = os.getenv("MYSQL_PASSWORD")
+        db_host = os.getenv("MYSQL_HOST")
+        db_port = os.getenv("MYSQL_PORT")
+        db_name = os.getenv("MYSQL_DATABASE")
+
+        if db_user and db_password and db_host and db_name:
+            mysql_url = f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port or 3306}/{db_name}"
+
     if not os.path.exists(app.instance_path):
         os.makedirs(app.instance_path)
     sqlite_url = f"sqlite:///{os.path.join(app.instance_path, 'fesData.db')}"
@@ -43,16 +58,19 @@ def create_app():
     if mysql_url:
         try:
             # タイムアウトを短めに設定して接続確認
-            temp_engine = create_engine(mysql_url, connect_args={"connect_timeout": 10})
+            temp_engine = create_engine(mysql_url, connect_args={"connect_timeout": 100})
+
             with temp_engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
             use_mysql = True
         except Exception as e:
             # マイグレーションコマンド実行時（flask db ...）はSQLiteへのフォールバックを禁止してエラーにする
-            if "db" in sys.argv:
-                app.logger.error(f"MySQL connection failed during migration: {e}")
+            if "db" in sys.argv or "sync-db" in sys.argv:
+                app.logger.error(f"MySQL connection failed during migration or sync: {e}")
+                if "1045" in str(e):
+                    app.logger.error("Hint: Check your database password in .env or user permissions (GRANT). If the error mentions a specific IP (e.g. 172.17.0.1), you must GRANT access to 'root'@'<IP>'.")
                 raise e
-            app.logger.warning("MySQL connection failed. Falling back to SQLite.")
+            app.logger.warning(f"MySQL connection failed: {e}. Falling back to SQLite.")
 
     app.config.from_mapping(
         SQLALCHEMY_DATABASE_URI=mysql_url if use_mysql else sqlite_url,
@@ -73,12 +91,22 @@ def create_app():
         LINE_REDIRECT_URI=os.getenv("REACT_APP_LINE_REDIRECT_URI"),
 
         BASE_URL=os.getenv("BASE_URL"),
+
+        # Mail Settings
+        MAIL_SERVER=os.getenv('MAIL_SERVER', 'smtp.gmail.com'),
+        MAIL_PORT=int(os.getenv('MAIL_PORT', 587)),
+        MAIL_USERNAME=os.getenv('MAIL_USERNAME'),
+        MAIL_PASSWORD=os.getenv('MAIL_PASSWORD'),
+        MAIL_USE_TLS=os.getenv('MAIL_USE_TLS', 'True') == 'True',
+        MAIL_DEFAULT_SENDER=os.getenv('MAIL_DEFAULT_SENDER', 'noreply@example.com'),
     )
 
     # --- Extensions Init ---
     db.init_app(app)
     migrate.init_app(app, db)
     bcrypt.init_app(app)
+    mail.init_app(app)
+    limiter.init_app(app)
 
     # 外部DBや外部サーバー利用時は、フロントエンドからのクロスオリジンリクエストを常に許可する
     CORS(
@@ -92,9 +120,11 @@ def create_app():
     with app.app_context():
         from . import api_routes
         from . import oauth
+        from . import pw_reset
 
         app.register_blueprint(api_routes.api_bp)
         app.register_blueprint(oauth.oauth_bp, url_prefix="/api/auth")
+        app.register_blueprint(pw_reset.pw_reset_bp)
 
         if is_production:
             # == Production Mode (1 Port) ==
@@ -110,6 +140,8 @@ def create_app():
     @app.cli.command("sync-db")
     def sync_db():
         """MySQLからローカルSQLiteへデータを同期する"""
+        print("DATABASE_URL:", mysql_url)
+        print("use_mysql:", use_mysql)
         if not use_mysql:
             print("エラー: DATABASE_URLが設定されていないか、MySQLに接続できません。")
             return

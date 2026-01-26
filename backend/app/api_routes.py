@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app, g, session
 from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey
 from datetime import datetime, timedelta, timezone
-from . import db
+from . import db, mail, limiter
 from .utils import calculate_concrete_date # 日付計算ユーティリティをインポート
 import jwt as pyjwt
 from functools import wraps

@@ -116,6 +116,12 @@ export default function AccountForm({ isPopup = false, onSuccess, isRegister = f
           />
         )}
 
+        {!isRegister && !usePasskeyAuth && (
+          <Anchor component={Link} to="/forgot-password" size="xs" ml="auto">
+            パスワードをお忘れですか？
+          </Anchor>
+        )}
+
         <Switch 
           label="パスキーを使用する" 
           checked={usePasskeyAuth} 

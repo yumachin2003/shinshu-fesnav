@@ -4,12 +4,14 @@
   "private": true,
   "scripts": {
     "tunnel": "ssh -L 3316:127.0.0.1:3316 j22069yn@133.242.152.98 -N",
-    "backend:dev": "cd backend && pipenv run flask run --host=0.0.0.0 --port=5052 --debug",
+    "sync:env": "scp j22069yn@133.242.152.98:/home/j22069yn/shinshu-fesnav/.env.local ./backend/.env.local",
+    "predev": "npm run sync:env",
+    "backend:dev": "cd backend && pipenv run flask run --debug",
     "backend:prod": "cd backend && export FLASK_ENV=production && pipenv run gunicorn --workers 4 --bind 0.0.0.0:5052 \"app:create_app()\"",
     "frontend": "cd frontend && npm start",
-    "sync-db": "wait-on tcp:127.0.0.1:3316 && echo 'Tunnel connected, syncing DB...' && cd backend && pipenv run flask sync-db",
+    "sync:db": "wait-on tcp:127.0.0.1:3316 && echo 'Tunnel connected, syncing DB...' && cd backend && pipenv run flask sync-db",
     "build-frontend": "cd frontend && npm run build",
-    "dev": "concurrently --kill-others-on-fail --handle-input --kill-signal SIGINT \"npm:tunnel\" \"npm:backend:dev\" \"npm:frontend\" \"npm:sync-db\"",
+    "dev": "concurrently --kill-others-on-fail --handle-input --kill-signal SIGINT \"npm:tunnel\" \"npm:backend:dev\" \"npm:frontend\" \"npm:sync:db\"",
     "prod": "npm run build-frontend && npm run backend:prod"
   },
   "devDependencies": {
