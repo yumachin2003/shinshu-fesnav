@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
 
-const API_BASE = "http://localhost:5051/api";
+const API_BASE = "http://localhost:5052/api";
 
 export const usePasskey = () => {
   const register = useCallback(async (username) => {
