@@ -43,7 +43,7 @@ export default function SocialLoginButtons({ action = 'login', isPopup = false }
           Googleで{textAction}
         </Button>
 
-        <Button fullWidth color="green" size={size} onClick={() => window.location.href = "http://localhost:5052/api/auth/line"}>
+        <Button fullWidth color="green" size={size} onClick={() => window.location.href = `${process.env.REACT_APP_API_BASE_URL}/auth/line`}>
           <img src={lineLogo} alt="LINE Logo" style={{ width: isPopup ? 14 : 20, height: isPopup ? 14 : 20, marginRight: 8 }} />
           LINEで{textAction}
         </Button>

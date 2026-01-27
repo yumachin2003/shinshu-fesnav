@@ -1,5 +1,5 @@
-from flask import Blueprint, request, jsonify, current_app, g, session
-from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey
+from flask import Blueprint, request, jsonify, current_app, g, session, send_from_directory
+from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey, FestivalPhoto
 from datetime import datetime, timedelta, timezone
 from . import db, mail, limiter
 from .utils import calculate_concrete_date # 日付計算ユーティリティをインポート
@@ -9,6 +9,11 @@ import requests
 import base64
 import webauthn
 import json
+import os
+import uuid
+from werkzeug.utils import secure_filename
+import re
+from urllib.parse import urlparse
 
 # 'api'という名前でBlueprintを作成
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -40,6 +45,31 @@ def token_required(f):
         return f(*args, **kwargs)
     return decorated
 
+# --- Helper Functions ---
+def get_rp_id():
+    """
+    WebAuthn用のRP_IDを環境と接続ホストに応じて動的に取得する
+    """
+    flask_env = os.getenv('FLASK_ENV', 'development')
+    # プロキシ経由のホスト名を優先的に取得
+    host_header = request.headers.get('X-Forwarded-Host') or request.host
+    host = host_header.split(':')[0]
+    
+    # ターミナルに必ず表示されるように出力
+    print(f"\n[WebAuthn Debug] RP_ID Check\n  Header: {host_header}\n  Extracted: {host}\n  Env: {flask_env}\n")
+
+    
+    if flask_env == 'production':
+        base_url = os.getenv('BASE_URL')
+        if base_url:
+            return urlparse(base_url).hostname
+        return host
+
+    is_ip = re.match(r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$', host)
+    if host == 'localhost' or is_ip:
+        return 'localhost'
+    return host
+
 # --- Debug API ---
 
 # GET /api/test : バックエンドサーバーとの接続テスト用
@@ -65,13 +95,22 @@ def get_festivals():
         Festivals.access, # accessを追加
     ).all()
 
+    # 写真データを一括取得してマッピング
+    photos = FestivalPhoto.query.all()
+    photos_map = {}
+    for p in photos:
+        if p.festival_id not in photos_map:
+            photos_map[p.festival_id] = []
+        photos_map[p.festival_id].append(p.to_dict())
+
     festival_list = []
     for festival in festivals_query:
         festival_data = {
             'id': festival.id, 'name': festival.name, 'date': festival.date.strftime('%Y-%m-%d') if festival.date else None,
             'location': festival.location, 'latitude': festival.latitude, 'longitude': festival.longitude, 'attendance': festival.attendance,
             'description': festival.description, # レスポンスに追加
-            'access': festival.access # レスポンスに追加
+            'access': festival.access, # レスポンスに追加
+            'photos': photos_map.get(festival.id, []) # 写真データを追加
         }
 
         festival_list.append(festival_data)
@@ -149,10 +188,68 @@ def delete_festival(festival_id):
     # 関連データの削除
     UserFavorite.query.filter_by(festival_id=festival_id).delete()
     Review.query.filter_by(festival_id=festival_id).delete()
+    FestivalPhoto.query.filter_by(festival_id=festival_id).delete()
     
     db.session.delete(festival)
     db.session.commit()
     return jsonify({'message': 'Festival deleted successfully'}), 200
+
+# POST /api/festivals/<festival_id>/photos : お祭りの写真をアップロード
+@api_bp.route('/festivals/<int:festival_id>/photos', methods=['POST'])
+@token_required
+def upload_festival_photo(festival_id):
+    # root ユーザーのみ許可（必要に応じて変更してください）
+    if g.current_user.username != "root":
+        return jsonify({'error': '権限がありません'}), 403
+
+    if 'photo' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    
+    file = request.files['photo']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+        
+    if file:
+        # ファイル名の安全化とユニーク化
+        ext = os.path.splitext(file.filename)[1].lower()
+        if not ext:
+            ext = '.jpg'
+        
+        unique_filename = f"{festival_id}_{uuid.uuid4().hex}{ext}"
+        
+        # 保存先ディレクトリ（app/static/uploads）
+        upload_dir = os.path.join(current_app.root_path, 'static', 'uploads')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file.save(os.path.join(upload_dir, unique_filename))
+        
+        # DBに保存するURLパス
+        image_url = f"/api/uploads/{unique_filename}"
+        
+        new_photo = FestivalPhoto(festival_id=festival_id, image_url=image_url)
+        db.session.add(new_photo)
+        db.session.commit()
+        
+        return jsonify(new_photo.to_dict()), 201
+
+    return jsonify({'error': 'Upload failed'}), 500
+
+# DELETE /api/photos/<photo_id> : 写真を削除
+@api_bp.route('/photos/<int:photo_id>', methods=['DELETE'])
+@token_required
+def delete_photo(photo_id):
+    if g.current_user.username != "root":
+        return jsonify({'error': '権限がありません'}), 403
+        
+    photo = FestivalPhoto.query.get(photo_id)
+    if not photo:
+        return jsonify({'error': 'Photo not found'}), 404
+
+    # ファイルの実体削除はここでは省略（必要ならos.removeを追加）
+    db.session.delete(photo)
+    db.session.commit()
+    
+    return jsonify({'message': 'Photo deleted successfully'}), 200
 
 # --- Review API ---
 
@@ -339,11 +436,11 @@ def passkey_register_options():
     if not username:
         return jsonify({"error": "ユーザー名を入力してください"}), 400
 
-    rp_id = request.host.split(':')[0]
+    rp_id = get_rp_id()
     
     options = webauthn.generate_registration_options(
         rp_id=rp_id,
-        rp_name="Shinshu FesNav",
+        rp_name="信州おまつりナビ",
         user_id=str(user.id if user else username).encode(),
         user_name=username,
         user_display_name=username,
@@ -381,8 +478,14 @@ def passkey_register_verify():
     if not challenge_b64:
         return jsonify({"error": "チャレンジが見つかりません。もう一度やり直してください。"}), 400
     
-    rp_id = request.host.split(':')[0]
+    rp_id = get_rp_id()
+    # Originヘッダーがない場合は、現在のホストから推測（開発用）
     origin = request.headers.get('Origin')
+    if not origin:
+        forwarded_host = request.headers.get('X-Forwarded-Host')
+        host_to_use = forwarded_host if forwarded_host else request.host
+        origin = f"https://{host_to_use}"
+    print(f"DEBUG: Registration Origin: {origin}")
 
     try:
         verification = webauthn.verify_registration_response(
@@ -436,7 +539,7 @@ def passkey_login_options():
     if not passkeys:
         return jsonify({"error": "パスキーが登録されていません"}), 400
 
-    rp_id = request.host.split(':')[0]
+    rp_id = get_rp_id()
     
     # 登録済みのクレデンシャルIDをデコードしてリスト化
     def b64_to_bin(s):
@@ -473,8 +576,13 @@ def passkey_login_verify():
     if not passkey or passkey.user_id != user.id:
         return jsonify({"error": "無効なパスキーです"}), 400
 
-    rp_id = request.host.split(':')[0]
+    rp_id = get_rp_id()
+    # Originヘッダーがない場合は、現在のホストから推測（開発用）
     origin = request.headers.get('Origin')
+    if not origin:
+        forwarded_host = request.headers.get('X-Forwarded-Host')
+        host_to_use = forwarded_host if forwarded_host else request.host
+        origin = f"https://{host_to_use}"
 
     try:
         verification = webauthn.verify_authentication_response(
@@ -507,6 +615,32 @@ def passkey_login_verify():
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+# --- Passkey Management API ---
+
+@api_bp.route('/account/passkeys', methods=['GET'])
+@token_required
+def get_user_passkeys():
+    user = g.current_user
+    passkeys = Passkey.query.filter_by(user_id=user.id).all()
+    return jsonify([{
+        'id': pk.id,
+        'credential_id': pk.credential_id
+    } for pk in passkeys]), 200
+
+@api_bp.route('/account/passkeys/<int:passkey_id>', methods=['DELETE'])
+@token_required
+def delete_passkey(passkey_id):
+    user = g.current_user
+    print(f"DEBUG: Delete passkey request - ID: {passkey_id}, User: {user.username}")
+    
+    passkey = db.session.get(Passkey, passkey_id)
+    if not passkey or passkey.user_id != user.id:
+        print(f"DEBUG: Passkey not found or unauthorized. ID: {passkey_id}")
+        return jsonify({"error": "パスキーが見つかりません"}), 404
+    db.session.delete(passkey)
+    db.session.commit()
+    return jsonify({"message": "削除しました"}), 200
 
 # --- EditLog API ---
 
@@ -632,3 +766,9 @@ def delete_admin_user(user_id):
     db.session.delete(user)
     db.session.commit()
     return jsonify({'message': 'ユーザーを削除しました'}), 200
+
+# --- Static Files API ---
+
+@api_bp.route('/uploads/<filename>')
+def serve_uploaded_file(filename):
+    return send_from_directory(os.path.join(current_app.root_path, 'static', 'uploads'), filename)

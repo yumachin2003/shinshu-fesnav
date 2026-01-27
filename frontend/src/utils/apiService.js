@@ -1,11 +1,12 @@
 import axios from 'axios';
 
 // 開発環境では localhost:5052 を、本番環境は相対パスを使用するように設定します
-const BASE_URL = '/api'; // proxy設定を利用するため /api で固定
+const BASE_URL = process.env.REACT_APP_API_BASE_URL || '/api';
 
 // axiosのインスタンスを作成
-const apiClient = axios.create({
+export const apiClient = axios.create({
   baseURL: BASE_URL,
+  withCredentials: true, // クッキー（セッション）を許可
   headers: {
     'Content-Type': 'application/json',
   },
@@ -98,6 +99,14 @@ export const lineLogin = (authCode) => {
 
 export const registerUser = (userData) => {
   return apiClient.post('/register', userData);
+};
+
+export const getUserPasskeys = () => {
+  return apiClient.get('/account/passkeys');
+};
+
+export const deletePasskey = (id) => {
+  return apiClient.delete(`/account/passkeys/${id}`);
 };
 
 export const updateProfile = (profileData) => {

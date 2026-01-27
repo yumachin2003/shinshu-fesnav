@@ -36,6 +36,7 @@ webauthn = "*"
 flask-mailman = "*"
 itsdangerous = "*"
 flask-limiter = "*"
+pyopenssl = "*"
 
 [dev-packages]
 

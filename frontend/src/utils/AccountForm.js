@@ -1,7 +1,8 @@
 import { useState, useContext } from "react";
 import { TextInput, PasswordInput, Button, Stack, Text, Divider, Anchor, Alert, Switch } from '@mantine/core';
+import { modals } from '@mantine/modals';
 import { Link, useNavigate } from "react-router-dom";
-import { UserContext } from "../App";
+import { UserContext } from "../UserContext";
 import { loginUser, registerUser } from "./apiService";
 import SocialLoginButtons from "../components/SocialLoginButtons";
 import { usePasskey } from "../hooks/usePasskey";
@@ -38,8 +39,14 @@ export default function AccountForm({ isPopup = false, onSuccess, isRegister = f
         // パスキー処理
         if (isRegister) {
           await register(username);
-          alert("パスキーの登録に成功しました！ログインページに移動します。");
-          navigate("/login");
+          modals.openModal({
+            title: '登録完了',
+            centered: true,
+            children: (
+              <Text size="sm">パスキーの登録に成功しました！ログインページに移動します。</Text>
+            ),
+            onClose: () => navigate("/login"),
+          });
         } else {
           const responseData = await login(username);
           handleAuthSuccess(responseData.user, responseData.token);
@@ -48,8 +55,14 @@ export default function AccountForm({ isPopup = false, onSuccess, isRegister = f
         // 通常のパスワード処理
         if (isRegister) {
           await registerUser({ username, email, password });
-          alert("登録が完了しました！ログインページに移動します。");
-          navigate("/login");
+          modals.openModal({
+            title: '登録完了',
+            centered: true,
+            children: (
+              <Text size="sm">登録が完了しました！ログインページに移動します。</Text>
+            ),
+            onClose: () => navigate("/login"),
+          });
         } else {
           const response = await loginUser({ username, password });
           const { token, user: loggedInUser } = response.data;

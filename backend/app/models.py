@@ -15,6 +15,7 @@ class Festivals(db.Model):
     attend_year = db.Column(db.Integer, default=0)
     description = db.Column(db.Text, nullable=True)
     access = db.Column(db.String(255), nullable=True)
+    
 
     def to_dict(self):
         return {
@@ -28,8 +29,27 @@ class Festivals(db.Model):
             "attend_year": self.attend_year,
             "description": self.description,
             "access": self.access,
+            "photos": [photo.to_dict() for photo in self.photos],
         }
 
+
+class FestivalPhoto(db.Model):
+    __tablename__ = "festival_photos"
+
+    id = db.Column(db.Integer, primary_key=True)
+    festival_id = db.Column(db.Integer, db.ForeignKey("festivals.id"), nullable=False)
+    image_url = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    festival = db.relationship("Festivals", backref=db.backref("photos", lazy=True))
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "festival_id": self.festival_id,
+            "image_url": self.image_url,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
 
 class User(db.Model):
     __tablename__ = "users"
@@ -38,7 +58,7 @@ class User(db.Model):
     username = db.Column(db.String(120), unique=True, nullable=False)
 
     # メールアドレス
-    email = db.Column(db.String(120), unique=True, nullable=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
 
     # ローカルログイン用（Googleログインでは NULL）
     password_hash = db.Column(db.String(255), nullable=True)

@@ -1,75 +1,44 @@
 import { useCallback } from 'react';
 import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
-
-const API_BASE = "http://localhost:5052/api";
+import { apiClient } from '../utils/apiService';
 
 export const usePasskey = () => {
   const register = useCallback(async (username) => {
-    const token = localStorage.getItem("authToken");
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    console.log("Passkey Register Start for:", username);
+    console.log("Is Secure Context:", window.isSecureContext);
+    if (!navigator.credentials) {
+      throw new Error("このブラウザまたは接続環境（非HTTPS等）ではパスキーを使用できません。");
+    }
 
     // 1. オプション取得
-    const resp = await fetch(`${API_BASE}/register/options`, {
-      method: 'POST',
-      credentials: 'include',
-      headers,
-      body: JSON.stringify({ username }),
-    });
-    if (!resp.ok) {
-      const errData = await resp.json().catch(() => ({}));
-      throw new Error(errData.error || `オプション取得失敗: ${resp.status}`);
-    }
-    const options = await resp.json();
+    const resp = await apiClient.post('/register/options', { username });
+    const options = resp.data;
 
     // 2. ブラウザで登録実行
-    const regResp = await startRegistration(options);
+    const regResp = await startRegistration({ optionsJSON: options });
 
     // 3. 検証
-    const verifyResp = await fetch(`${API_BASE}/register/verify`, {
-      method: 'POST',
-      credentials: 'include',
-      headers,
-      body: JSON.stringify(regResp),
-    });
-
-    if (!verifyResp.ok) {
-      const verifyErr = await verifyResp.json().catch(() => ({}));
-      throw new Error(verifyErr.error || 'パスキーの検証に失敗しました。');
-    }
-    return await verifyResp.json();
+    const verifyResp = await apiClient.post('/register/verify', regResp);
+    return verifyResp.data;
   }, []);
 
   const login = useCallback(async (username) => {
-    // 1. オプション取得
-    const resp = await fetch(`${API_BASE}/login/options`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username }),
-    });
-    if (!resp.ok) {
-      const errData = await resp.json().catch(() => ({}));
-      throw new Error(errData.error || `認証オプション取得失敗: ${resp.status}`);
+    console.log("Passkey Login Start for:", username);
+    console.log("Is Secure Context:", window.isSecureContext);
+    if (!navigator.credentials) {
+      throw new Error("このブラウザまたは接続環境ではパスキーを使用できません。");
     }
-    const options = await resp.json();
+
+    // 1. オプション取得
+    const resp = await apiClient.post('/login/options', { username });
+    const options = resp.data;
 
     // 2. ブラウザで認証実行
-    const authResp = await startAuthentication(options);
+    const authResp = await startAuthentication({ optionsJSON: options });
 
     // 3. 検証
-    const verifyResp = await fetch(`${API_BASE}/login/verify`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(authResp),
-    });
-
-    if (!verifyResp.ok) {
-      const verifyErr = await verifyResp.json().catch(() => ({}));
-      throw new Error(verifyErr.error || '認証に失敗しました');
-    }
-    return await verifyResp.json();
+    const verifyResp = await apiClient.post('/login/verify', authResp);
+    return verifyResp.data;
   }, []);
 
   return { register, login };

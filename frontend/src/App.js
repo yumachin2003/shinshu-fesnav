@@ -1,6 +1,7 @@
 // 必要なモジュールやコンポーネントのインポート
 import React, { useState, useEffect } from "react";
 import { AppShell, Group, Title, Button, MantineProvider, ActionIcon } from '@mantine/core';
+import { ModalsProvider } from '@mantine/modals';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from "react-router-dom";
 import { useLocalStorage } from '@mantine/hooks';
 import { IconSun, IconMoonStars } from '@tabler/icons-react';
@@ -16,10 +17,7 @@ import './App.css'; // アプリケーション全体のスタイルをインポ
 import { getAccountData } from "./utils/apiService";
 import AccountHoverCard from "./components/AccountHoverCard";
 import InformationDashboard from "./pages/InformationDashboard";
-
-
-// ユーザー情報共有のためのContext作成
-export const UserContext = React.createContext();
+import { UserContext } from "./UserContext";
 
 const safeParse = (key) => {
   try {
@@ -74,9 +72,10 @@ export default function App() {
 
   return (
     <MantineProvider theme={{ colorScheme }} forceColorScheme={colorScheme}>
+      <ModalsProvider>
       {/* UserContext.Providerで、userとsetUserを子コンポーネントに提供 */}
       <UserContext.Provider value={{ user, setUser }}>
-        <Router>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <AppShell
             header={{ height: 60 }}
             padding="md"
@@ -128,6 +127,7 @@ export default function App() {
           </AppShell>
         </Router>
       </UserContext.Provider>
+      </ModalsProvider>
     </MantineProvider>
   );
 }

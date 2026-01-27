@@ -3,7 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { Container, Card, Image, Title, Text, Group, Button, Alert, Paper, Stack, AspectRatio, Modal } from "@mantine/core";
 import { IconCalendar, IconMapPin, IconRoad, IconUsers, IconEdit } from '@tabler/icons-react';
 import Favorite from "../utils/Favorite";
-import { UserContext } from "../App";
+import { UserContext } from "../UserContext";
 import { getFestivals, getAccountData, updateFavorites} from "../utils/apiService";
 import useApiData from "../hooks/useApiData";
 import BackButton from "../utils/BackButton";

@@ -1,24 +1,16 @@
 import React, { useState, useContext } from "react";
 import { HoverCard, Button, Stack, Text } from '@mantine/core';
 import { Link, useLocation } from "react-router-dom";
-import { UserContext } from "../App";
+import { UserContext } from "../UserContext";
 import AccountForm from "../utils/AccountForm";
+import { useLogout } from "../hooks/useLogout";
 
 export default function AccountHoverCard() {
-  const { user, setUser } = useContext(UserContext);
+  const { user } = useContext(UserContext);
   const [opened, setOpened] = useState(false);
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
-
-  const handleLogout = () => {
-    if (window.confirm("本当にログアウトしますか？")) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      setUser(null);
-      setOpened(false);
-      window.location.href = "/";
-    }
-  };
+  const logout = useLogout();
 
   if (user) {
     return (
@@ -41,7 +33,10 @@ export default function AccountHoverCard() {
           <Stack gap="xs">
             <Text size="sm" fw={500}>ログイン中</Text>
             <Text size="xs" c="dimmed">ユーザー名: {user.display_name || user.username}</Text>
-            <Button variant="outline" color="red" size="xs" fullWidth onClick={handleLogout}>
+            <Button variant="outline" color="red" size="xs" fullWidth onClick={() => {
+              setOpened(false);
+              logout();
+            }}>
               ログアウト
             </Button>
           </Stack>

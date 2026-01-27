@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useContext, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Container, Title, Text, Button, Group, List, Alert, SegmentedControl, Center, Box, Stack, TextInput, PasswordInput } from '@mantine/core';
-import { UserContext } from "../App";
-import { getFestivals, getAccountData, updateFavorites, getEditLogs, addEditLogToBackend, updateProfile } from "../utils/apiService";
+import { Container, Title, Text, Button, Group, List, Alert, SegmentedControl, Center, Box, Stack, TextInput, PasswordInput, Divider, Paper } from '@mantine/core';
+import { modals } from '@mantine/modals';
+import { UserContext } from "../UserContext";
+import { getFestivals, getAccountData, updateFavorites, getEditLogs, addEditLogToBackend, updateProfile, getUserPasskeys, deletePasskey } from "../utils/apiService";
 import useApiData from '../hooks/useApiData';
 import { initGoogleTranslate } from "../utils/translate";
 import { IconLogout, IconHeart, IconHistory, IconSettings } from '@tabler/icons-react';
@@ -33,6 +34,11 @@ export default function Account() {
   );
   const { data: fetchedEditLogs, loading: editLogsLoading, error: editLogsError, refetch: refetchEditLogs } = useApiData(
     getEditLogs,
+    [user?.id],
+    !user
+  );
+  const { data: passkeys, loading: passkeysLoading, error: passkeysError, refetch: refetchPasskeys } = useApiData(
+    getUserPasskeys,
     [user?.id],
     !user
   );
@@ -106,6 +112,33 @@ export default function Account() {
     }
   };
 
+  const handleDeletePasskey = async (e, id) => {
+    e.preventDefault();
+    e.stopPropagation();
+    modals.openConfirmModal({
+      title: 'パスキーの削除',
+      centered: true,
+      children: (
+        <Text size="sm">
+          このパスキーを削除しますか？この操作は取り消せません。
+        </Text>
+      ),
+      labels: { confirm: '削除する', cancel: 'キャンセル' },
+      confirmProps: { color: 'red' },
+      onConfirm: async () => {
+        console.log("Confirmation received. Sending DELETE request...");
+        try {
+          await deletePasskey(id);
+          console.log("DELETE request successful.");
+          refetchPasskeys();
+        } catch (err) {
+          console.error("Passkey deletion failed:", err);
+          alert("削除に失敗しました: " + err.message);
+        }
+      },
+    });
+  };
+
   const segmentData = useMemo(() => [
     {
       value: 'favorites',
@@ -139,7 +172,7 @@ export default function Account() {
   // --- ローディング／エラー ---
   if (!user) return <Container><Text>ログイン情報を確認しています...</Text></Container>;
   if (festivalsLoading || accountLoading || editLogsLoading) return <Container><Text>データを読み込み中...</Text></Container>;
-  if (festivalsError || accountError || editLogsError) return <Container><Alert color="red" title="エラー">データの読み込みに失敗しました</Alert></Container>;
+  if (festivalsError || accountError || editLogsError || passkeysError) return <Container><Alert color="red" title="エラー">データの読み込みに失敗しました</Alert></Container>;
 
   // --- UI ---
   return (
@@ -152,7 +185,12 @@ export default function Account() {
           leftSection={<IconLogout size={16} />} 
           color="red" 
           variant="outline" 
-          onClick={logout}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log("Logout button clicked");
+            logout();
+          }}
         >
           ログアウト
         </Button>
@@ -224,14 +262,40 @@ export default function Account() {
               onChange={(e) => setNewPassword(e.currentTarget.value)}
             />
             <Button onClick={handleUpdateProfile}>プロフィールを更新</Button>
+            
+            <Divider my="sm" label="パスキー設定" labelPosition="center" w="100%" />
             <PasskeyButton 
               action="register" 
               username={user?.username} 
               variant="outline" 
               color="blue"
-              onSuccess={() => alert('パスキーの登録に成功しました！')}
+              fullWidth
+              onSuccess={() => {
+                alert('パスキーの登録に成功しました！');
+                refetchPasskeys();
+              }}
               onError={(err) => alert('パスキー設定失敗: ' + err.message)}
             >パスキーを設定する</PasskeyButton>
+
+            <Box w="100%" mt="xs">
+              <Text size="sm" fw={500} mb={5}>登録済みデバイス</Text>
+              {passkeysLoading ? <Text size="xs">読み込み中...</Text> : (
+                <Stack gap={5}>
+                  {Array.isArray(passkeys) && passkeys.length > 0 ? passkeys.map(pk => (
+                    <Paper key={pk.id} withBorder p="xs" radius="sm">
+                      <Group justify="space-between" wrap="nowrap">
+                        <Text size="xs" c="dimmed" truncate style={{ flex: 1 }}>
+                          ID: {pk.credential_id?.substring(0, 20) || '不明'}...
+                        </Text>
+                        <Button size="compact-xs" color="red" variant="light" onClick={(e) => handleDeletePasskey(e, pk.id)}>削除</Button>
+                      </Group>
+                    </Paper>
+                  )) : (
+                    <Text size="xs" c="dimmed" ta="center">登録されたパスキーはありません</Text>
+                  )}
+                </Stack>
+              )}
+            </Box>
           </Stack>
         </Box>
       )}

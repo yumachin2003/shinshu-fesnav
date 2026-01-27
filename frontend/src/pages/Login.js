@@ -1,7 +1,7 @@
 import React, { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Container, Title, Paper } from '@mantine/core';
-import { UserContext } from "../App";
+import { UserContext } from "../UserContext";
 import { initGoogleTranslate } from "../utils/translate";
 import AccountForm from "../utils/AccountForm";
 import BackButton from "../utils/BackButton";
