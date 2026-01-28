@@ -1,23 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid'; // 週表示用プラグイン
 import listPlugin from '@fullcalendar/list';       // リスト表示用プラグイン
 import interactionPlugin from '@fullcalendar/interaction';
-import { Modal, Title, Text, Group, Button, Stack, Paper, Box, List } from '@mantine/core';
+import { Modal, Title, Text, Group, Button, Stack, Paper, Box, List, LoadingOverlay, Container, Alert } from '@mantine/core';
 import { Link } from 'react-router-dom';
 import { IconCalendar, IconMapPin } from '@tabler/icons-react';
+import { getFestivals } from '../utils/apiService';
+import useApiData from '../hooks/useApiData';
 
 // FullCalendarのスタイルをインポート
-import './FestivalCalendar.css';
+import '../components/FestivalCalendar.css';
 
-export default function FestivalCalendar({ festivals }) {
+export default function Calendar() {
+  const { data, loading, error } = useApiData(getFestivals);
+  const festivals = data || [];
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [currentMonthEvents, setCurrentMonthEvents] = useState([]);
   const [listTitle, setListTitle] = useState('');
 
   // お祭りデータをFullCalendarが要求する形式に変換
-  const events = festivals.map(festival => {
+  const events = useMemo(() => festivals.map(festival => {
     // 日付の比較用に今日の0時0分0秒のDateオブジェクトを生成
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -40,7 +44,7 @@ export default function FestivalCalendar({ festivals }) {
       },
       color: eventColor, // イベントの色を設定
     };
-  });
+  }), [festivals]);
 
   // カレンダー上のイベントがクリックされたときの処理
   const handleEventClick = (clickInfo) => {
@@ -79,8 +83,13 @@ export default function FestivalCalendar({ festivals }) {
     setCurrentMonthEvents(filteredEvents);
   };
 
+  if (error) {
+    return <Container py="xl"><Alert color="red" title="エラー">データの読み込みに失敗しました</Alert></Container>;
+  }
+
   return (
-    <>
+    <Box pos="relative" minH={400}>
+      <LoadingOverlay visible={loading} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
       {/* カレンダーの凡例（色の説明） */}
       <Paper shadow="xs" p="sm" mb="md" withBorder>
         <Group justify="center" gap="xl">
@@ -172,6 +181,6 @@ export default function FestivalCalendar({ festivals }) {
           <Text c="dimmed">この月のイベントはありません。</Text>
         )}
       </Paper>
-    </>
+    </Box>
   );
 }

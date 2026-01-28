@@ -5,7 +5,6 @@ import { modals } from '@mantine/modals';
 import { UserContext } from "../UserContext";
 import { getFestivals, getAccountData, updateFavorites, getEditLogs, addEditLogToBackend, updateProfile, getUserPasskeys, deletePasskey } from "../utils/apiService";
 import useApiData from '../hooks/useApiData';
-import { initGoogleTranslate } from "../utils/translate";
 import { IconLogout, IconHeart, IconHistory, IconSettings } from '@tabler/icons-react';
 import { useLogout } from "../hooks/useLogout";
 import PasskeyButton from "../components/PasskeyButton";
@@ -13,9 +12,6 @@ import PasskeyButton from "../components/PasskeyButton";
 export default function Account() {
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
-
-  // --- Google翻訳初期化 ---
-  useEffect(() => initGoogleTranslate(), []);
 
   // --- ログインチェックとリダイレクト ---
   useEffect(() => {

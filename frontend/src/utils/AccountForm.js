@@ -8,7 +8,7 @@ import SocialLoginButtons from "../components/SocialLoginButtons";
 import { usePasskey } from "../hooks/usePasskey";
 
 export default function AccountForm({ isPopup = false, onSuccess, isRegister = false }) {
-  const { setUser } = useContext(UserContext);
+  const { setUser, openLogin, openRegister } = useContext(UserContext);
   const navigate = useNavigate();
   const { register, login } = usePasskey();
   const [username, setUsername] = useState("");
@@ -27,7 +27,7 @@ export default function AccountForm({ isPopup = false, onSuccess, isRegister = f
     if (onSuccess) onSuccess();
 
     const targetPath = loggedInUser.username === 'root' ? '/admin/dashboard' : '/festivals';
-    window.location.href = targetPath;
+    navigate(targetPath);
   };
 
   const handleSubmit = async (e) => {
@@ -153,7 +153,10 @@ export default function AccountForm({ isPopup = false, onSuccess, isRegister = f
 
         <Text size="xs" ta="center" mt={5}>
         {isRegister ? "すでにアカウントをお持ちですか？ " : "アカウントをお持ちでないですか？ "}
-        <Anchor component={Link} to={isRegister ? "/login" : "/register"} state={{ fromLoginPage: !isPopup }} size="xs">
+        <Anchor component="button" type="button" onClick={(e) => {
+          e.preventDefault();
+          isRegister ? openLogin() : openRegister();
+        }} size="xs">
             {isRegister ? "ログイン" : "新規登録"}
         </Anchor>
         </Text>

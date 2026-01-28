@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Container, Card, Image, Title, Text, Group, Button, Alert, Paper, Stack, AspectRatio, Modal } from "@mantine/core";
 import { IconCalendar, IconMapPin, IconRoad, IconUsers, IconEdit } from '@tabler/icons-react';
 import Favorite from "../utils/Favorite";
@@ -13,7 +13,7 @@ import InformationModal from "../components/InformationModal";
 
 export default function FestivalDetail() {
   const { id } = useParams();
-  const { user } = useContext(UserContext);
+  const { user, openLogin } = useContext(UserContext);
 
   const [open, setOpen] = useState(false);
   const [loginModalOpened, setLoginModalOpened] = useState(false);
@@ -174,7 +174,10 @@ export default function FestivalDetail() {
         </Text>
         <Group justify="flex-end">
           <Button variant="subtle" onClick={() => setLoginModalOpened(false)}>キャンセル</Button>
-          <Button component={Link} to="/login">ログインページへ</Button>
+          <Button onClick={() => {
+            setLoginModalOpened(false);
+            openLogin();
+          }}>ログインする</Button>
         </Group>
       </Modal>
     </Container>

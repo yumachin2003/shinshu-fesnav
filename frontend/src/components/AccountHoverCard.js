@@ -1,16 +1,25 @@
-import React, { useState, useContext } from "react";
-import { HoverCard, Button, Stack, Text } from '@mantine/core';
-import { Link, useLocation } from "react-router-dom";
+import React, { useState, useContext, useEffect } from "react";
+import { HoverCard, Button, Stack, Text, Anchor } from '@mantine/core';
+import { useLocation } from "react-router-dom";
+import { useMediaQuery } from '@mantine/hooks';
+import { IconUser } from '@tabler/icons-react';
 import { UserContext } from "../UserContext";
-import AccountForm from "../utils/AccountForm";
 import { useLogout } from "../hooks/useLogout";
 
 export default function AccountHoverCard() {
-  const { user } = useContext(UserContext);
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const { user, openLogin, openRegister, loginOpened, registerOpened } = useContext(UserContext);
   const [opened, setOpened] = useState(false);
   const location = useLocation();
   const isLoginPage = location.pathname === "/login";
   const logout = useLogout();
+
+  // ログインまたは新規登録のドロワーが開いたら、ホバーカードを強制的に閉じる
+  useEffect(() => {
+    if (loginOpened || registerOpened) {
+      setOpened(false);
+    }
+  }, [loginOpened, registerOpened]);
 
   if (user) {
     return (
@@ -25,8 +34,8 @@ export default function AccountHoverCard() {
         disabled={isLoginPage}
       >
         <HoverCard.Target>
-          <Button component={Link} to="/account" variant="subtle" onClick={() => setOpened(false)}>
-            アカウント
+          <Button variant="subtle" leftSection={<IconUser size={18} />} px={isMobile ? 8 : undefined}>
+            {!isMobile && "アカウント"}
           </Button>
         </HoverCard.Target>
         <HoverCard.Dropdown>
@@ -47,7 +56,7 @@ export default function AccountHoverCard() {
 
   return (
     <HoverCard 
-      width={300} 
+      width={220} 
       shadow="md" 
       withArrow 
       openDelay={200} 
@@ -57,12 +66,29 @@ export default function AccountHoverCard() {
       disabled={isLoginPage}
     >
       <HoverCard.Target>
-        <Button component={Link} to="/login" variant="subtle" onClick={() => setOpened(false)}>
-          アカウント
+        <Button variant="subtle" leftSection={<IconUser size={18} />} px={isMobile ? 8 : undefined}>
+          {!isMobile && "アカウント"}
         </Button>
       </HoverCard.Target>
       <HoverCard.Dropdown>
-        <AccountForm isPopup={true} onSuccess={() => setOpened(false)} />
+        <Stack gap="xs">
+          <Text size="sm" fw={500}>ログインしていません</Text>
+          <Button variant="outline" color="blue" size="xs" fullWidth onClick={() => {
+            setOpened(false);
+            openLogin();
+          }}>
+            ログイン
+          </Button>
+          <Text size="xs" ta="center" mt={5}>
+            または: 
+            <Anchor component="button" type="button" size="xs" ml={5} onClick={() => {
+              setOpened(false);
+              openRegister();
+            }}>
+              新規登録
+            </Anchor>
+          </Text>
+        </Stack>
       </HoverCard.Dropdown>
     </HoverCard>
   );
