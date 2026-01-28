@@ -60,12 +60,24 @@ function AppContent({
         borderBottom: `1px solid ${headerColorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
       }}>
         <MantineProvider forceColorScheme={headerColorScheme}>
-          <Group h="100%" px="md" justify="space-between">
-            <Title order={1} size="h3" c={headerColorScheme === 'dark' ? 'white' : 'dark'}>信州おまつりナビ</Title>
-            <Group gap="xs">
-              <Button component={Link} to="/festivals" variant="subtle" leftSection={<IconList size={18} />} px={isMobile ? 8 : undefined}>
-                {!isMobile && "おまつり"}
-              </Button>
+          <Group h="100%" px="xs" justify="space-between" wrap="nowrap">
+            <Title 
+              order={1} 
+              size={isMobile ? "1.1rem" : "h3"} // モバイル時はさらに小さく
+              c={headerColorScheme === 'dark' ? 'white' : 'dark'}
+              style={{ flexShrink: 0 }} // タイトルが潰れないように固定
+            >
+              信州おまつりナビ
+            </Title>
+            <Group h="100%" px="xs" justify="space-between" wrap="nowrap">
+              <Title 
+                order={1} 
+                size={isMobile ? "1.1rem" : "h3"} // モバイル時はさらに小さく
+                c={headerColorScheme === 'dark' ? 'white' : 'dark'}
+                style={{ flexShrink: 0 }} // タイトルが潰れないように固定
+              >
+                信州おまつりナビ
+              </Title>
               <Button component={Link} to="/calendar" variant="subtle" leftSection={<IconCalendar size={18} />} px={isMobile ? 8 : undefined}>
                 {!isMobile && "カレンダー"}
               </Button>
@@ -81,10 +93,10 @@ function AppContent({
               <ActionIcon
                 onClick={toggleColorScheme}
                 variant="default"
-                size="lg"
+                size={isMobile ? "sm" : "lg"} // アイコン自体も少し小さく
                 aria-label="Toggle color scheme"
               >
-                {colorScheme === 'dark' ? <IconSun stroke={1.5} /> : <IconMoonStars stroke={1.5} />}
+                {colorScheme === 'dark' ? <IconSun size={18} /> : <IconMoonStars size={18} />}
               </ActionIcon>
             </Group>
           </Group>

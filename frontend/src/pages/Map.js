@@ -120,10 +120,10 @@ function Map() {
     const handleH = 32; 
     const minH = titleOnlyHeight + handleH + 16;
     const selectedH = (selectedFestivalId ? titleOnlyHeight + handleH + cardHeight + 68 : 0)
-    const midH = titleOnlyHeight + handleH + 400;
+    const midH = titleOnlyHeight + handleH + (isMobile ? 120 : 400);
     const maxH = window.innerHeight * 0.92;
     return [minH, selectedH, midH, maxH];
-  }, [titleOnlyHeight, cardHeight, selectedFestivalId]);
+  }, [titleOnlyHeight, cardHeight, selectedFestivalId, isMobile]);
 
   // 初期高さ（フォールバック用）
   const [sidebarHeight, setSidebarHeight] = useState(window.innerHeight * 0.45);
@@ -233,11 +233,13 @@ function Map() {
       style={{ 
         position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
         overflow: 'hidden', display: 'flex', flexDirection: 'column',
-        backgroundColor: '#1A1B1E'
+        backgroundColor: '#1A1B1E',
+        touchAction: 'none'
       }}
     >
       <style>
         {`
+          body { overflow: hidden; position: fixed; width: 100%; }
           .user-location-marker .dot { width: 12px; height: 12px; background-color: #228be6; border: 2px solid white; border-radius: 50%; position: absolute; top: 4px; left: 4px; z-index: 2; }
           .user-location-marker .pulse { width: 20px; height: 20px; background-color: rgba(34, 139, 230, 0.6); border-radius: 50%; position: absolute; top: 0; left: 0; animation: pulse-animation 2s infinite; }
           @keyframes pulse-animation { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(3); opacity: 0; } }
@@ -262,7 +264,15 @@ function Map() {
         >
           <TileLayer attribution='© Google' url="https://mt1.google.com/vt/lyrs=y&hl=ja&x={x}&y={y}&z={z}" />
           
-          <div className={!isResizing ? 'controls-transition' : ''} style={{ position: 'absolute', bottom: 20, right: 20, zIndex: 1000 }}>
+          <div 
+            className={!isResizing ? 'controls-transition' : ''} 
+            style={{ 
+              position: 'absolute', 
+              bottom: isMobile ? (sidebarHeight + 20) : 20, // サイドバーの高さ + 余白20px
+              right: 20, 
+              zIndex: 1000 
+            }}
+          >
             <MapControls glassStyle={glassStyle} hasUserLocation={!!userLocation} handleCurrentLocation={handleCurrentLocation} />
           </div>
 
@@ -311,17 +321,18 @@ function Map() {
         backgroundColor: glassStyle.backgroundColor, 
         backdropFilter: glassStyle.backdropFilter, WebkitBackdropFilter: glassStyle.WebkitBackdropFilter,
         borderRadius: '20px 20px 0 0', border: glassStyle.border, boxShadow: '0 -4px 30px rgba(0, 0, 0, 0.3)',
+        touchAction: 'none',
         display: 'flex', flexDirection: 'column', 
         zIndex: 2000, 
         overflow: 'hidden'
       }}>
         {/* 持ち手 */}
-        <Box onMouseDown={startResizing} onTouchStart={startResizing} style={{ height: '32px', paddingTop: '12px', cursor: 'row-resize', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}>
+        <Box onMouseDown={startResizing} onTouchStart={startResizing} style={{ height: '32px', paddingTop: '12px', cursor: 'row-resize', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', touchAction: 'none' }}>
           <Box style={{ width: '40px', height: '5px', borderRadius: '10px', backgroundColor: 'rgba(128,128,128,0.4)' }} />
         </Box>
 
         {/* --- 固定エリア（ここをスクロールさせない） --- */}
-        <Box px="md" pb="md" style={{ borderBottom: sidebarHeight > snapPoints[0] + 10 ? '1px solid #373a40' : 'none' }}>
+        <Box px="md" pb="md" style={{ borderBottom: sidebarHeight > snapPoints[0] + 10 ? '1px solid #373a40' : 'none', touchAction: 'none' }}>
           <div ref={titleOnlyRef}>
             <Title order={3} mb={sidebarHeight > snapPoints[0] + 10 ? "xs" : 0}>おまつり一覧</Title>
           </div>
@@ -377,7 +388,7 @@ function Map() {
         </Box>
         
         {/* --- スクロールエリア（リストのみ） --- */}
-        <ScrollArea style={{ flex: 1, opacity: sidebarHeight > snapPoints[0] + 20 ? 1 : 0 }}>
+        <ScrollArea style={{ flex: 1, opacity: sidebarHeight > snapPoints[0] + 20 ? 1 : 0, touchAction: 'pan-y' }}>
           <Stack gap="xs" pt="md" pb={80} pl={0} pr="md">
             <List spacing={0} size="sm">
               {filteredFestivals.map(f => (
