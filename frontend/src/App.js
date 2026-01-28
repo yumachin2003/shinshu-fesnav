@@ -70,14 +70,9 @@ function AppContent({
               信州おまつりナビ
             </Title>
             <Group h="100%" px="xs" justify="space-between" wrap="nowrap">
-              <Title 
-                order={1} 
-                size={isMobile ? "1.1rem" : "h3"} // モバイル時はさらに小さく
-                c={headerColorScheme === 'dark' ? 'white' : 'dark'}
-                style={{ flexShrink: 0 }} // タイトルが潰れないように固定
-              >
-                信州おまつりナビ
-              </Title>
+              <Button component={Link} to="/festivals" variant="subtle" leftSection={<IconList size={18} />} px={isMobile ? 8 : undefined} styles={{ section: { marginRight: isMobile ? 0 : 8 } }}>
+                {!isMobile && "おまつり"}
+              </Button>
               <Button component={Link} to="/calendar" variant="subtle" leftSection={<IconCalendar size={18} />} px={isMobile ? 8 : undefined}>
                 {!isMobile && "カレンダー"}
               </Button>
