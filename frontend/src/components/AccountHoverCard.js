@@ -1,6 +1,6 @@
 import React, { useState, useContext, useEffect } from "react";
 import { HoverCard, Button, Stack, Text, Anchor } from '@mantine/core';
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom"; // Link をインポート
 import { useMediaQuery } from '@mantine/hooks';
 import { IconUser } from '@tabler/icons-react';
 import { UserContext } from "../UserContext";
@@ -11,16 +11,16 @@ export default function AccountHoverCard() {
   const { user, openLogin, openRegister, loginOpened, registerOpened } = useContext(UserContext);
   const [opened, setOpened] = useState(false);
   const location = useLocation();
-  const isLoginPage = location.pathname === "/login";
+  const isAccountPage = location.pathname === "/account";
   const logout = useLogout();
 
-  // ログインまたは新規登録のドロワーが開いたら、ホバーカードを強制的に閉じる
   useEffect(() => {
     if (loginOpened || registerOpened) {
       setOpened(false);
     }
   }, [loginOpened, registerOpened]);
 
+  // ログイン済みの場合
   if (user) {
     return (
       <HoverCard 
@@ -31,10 +31,18 @@ export default function AccountHoverCard() {
         closeDelay={200}
         opened={opened}
         onChange={setOpened}
-        disabled={isLoginPage}
+        disabled={isAccountPage}
       >
         <HoverCard.Target>
-          <Button variant="subtle" leftSection={<IconUser size={18} />} px={isMobile ? 8 : undefined}>
+          {/* ★ component={Link} と to="/account" を追加 */}
+          <Button 
+            component={Link} 
+            to="/account"
+            variant={isAccountPage ? "light" : "subtle"}
+            leftSection={<IconUser size={18} />} 
+            px={isMobile ? 8 : undefined}
+            onClick={() => setOpened(false)} // クリック時にメニューを閉じる
+          >
             {!isMobile && "アカウント"}
           </Button>
         </HoverCard.Target>
@@ -42,6 +50,10 @@ export default function AccountHoverCard() {
           <Stack gap="xs">
             <Text size="sm" fw={500}>ログイン中</Text>
             <Text size="xs" c="dimmed">ユーザー名: {user.display_name || user.username}</Text>
+            {/* 詳細ページへの導線としても機能 */}
+            <Button component={Link} to="/account" variant="light" size="xs" fullWidth onClick={() => setOpened(false)}>
+              アカウント設定
+            </Button>
             <Button variant="outline" color="red" size="xs" fullWidth onClick={() => {
               setOpened(false);
               logout();
@@ -54,6 +66,7 @@ export default function AccountHoverCard() {
     );
   }
 
+  // 未ログインの場合（ボタンを押しても遷移せず、ホバーメニューでログインを促す）
   return (
     <HoverCard 
       width={220} 
@@ -63,10 +76,14 @@ export default function AccountHoverCard() {
       closeDelay={200}
       opened={opened}
       onChange={setOpened}
-      disabled={isLoginPage}
     >
       <HoverCard.Target>
-        <Button variant="subtle" leftSection={<IconUser size={18} />} px={isMobile ? 8 : undefined}>
+        <Button 
+          variant="subtle" 
+          leftSection={<IconUser size={18} />} 
+          px={isMobile ? 8 : undefined}
+          onClick={openLogin} // 未ログイン時は直接ログイン画面を開くのもアリ
+        >
           {!isMobile && "アカウント"}
         </Button>
       </HoverCard.Target>

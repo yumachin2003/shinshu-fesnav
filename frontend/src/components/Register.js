@@ -10,7 +10,7 @@ export default function Register({ opened, onClose }) {
       title="新規登録"
       position="right"
       size="md"
-      zIndex={1000}
+      zIndex={3100}
       overlayProps={{ backgroundOpacity: 0.5, blur: 4 }}
       transitionProps={{ transition: 'slide-left', duration: 400 }}
     >

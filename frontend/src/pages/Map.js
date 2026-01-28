@@ -334,7 +334,7 @@ function Map() {
         {/* --- 固定エリア（ここをスクロールさせない） --- */}
         <Box px="md" pb="md" style={{ borderBottom: sidebarHeight > snapPoints[0] + 10 ? '1px solid #373a40' : 'none', touchAction: 'none' }}>
           <div ref={titleOnlyRef}>
-            <Title order={3} mb={sidebarHeight > snapPoints[0] + 10 ? "xs" : 0}>おまつり一覧</Title>
+            <Title order={3} c="white" mb={sidebarHeight > snapPoints[0] + 10 ? "xs" : 0}>おまつり一覧</Title>
           </div>
           
           <div className="fade-transition" style={{ 
@@ -346,14 +346,14 @@ function Map() {
             <Stack gap="xs">
               <TextInput placeholder="検索..." leftSection={<IconSearch size={14} />} value={searchTerm} onChange={(e) => setSearchTerm(e.currentTarget.value)} size="xs" />
               
-              {/* 【修正】詳細カードをスクロールの外（ここ）に配置 */}
+              {/* 詳細カード */}
               {selectedFestival && (
                 <div ref={cardRef} className="fade-transition">
                   <Paper shadow="sm" p="md" withBorder style={{ ...glassStyle, position: 'relative', border: '1px solid #444' }}>
                     <CloseButton onClick={handleReset} style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }} />
                     <Stack gap="xs">
                       <Box pr={30}>
-                        <Text fw={700} size="lg">{selectedFestival.name}</Text>
+                        <Text fw={700} size="lg" c="white">{selectedFestival.name}</Text>
                         <Text size="xs" c="dimmed">{selectedFestival.location}</Text>
                         {userLocation && <Text size="xs" c="blue.5" fw={600} mt={4}>現在地から約 {calculateDistance(userLocation[0], userLocation[1], selectedFestival.latitude, selectedFestival.longitude).toFixed(1)} km</Text>}
                       </Box>
@@ -405,7 +405,7 @@ function Map() {
                   }}
                 >
                   <Group justify="space-between" wrap="nowrap">
-                    <Box><Text fw={500}>{f.name}</Text><Text c="dimmed" size="xs">{f.location}</Text></Box>
+                    <Box><Text fw={500} c="white">{f.name}</Text><Text c="dimmed" size="xs">{f.location}</Text></Box>
                     <IconMapPin size={16} style={{ color: 'red', flexShrink: 0 }} />
                   </Group>
                 </List.Item>
