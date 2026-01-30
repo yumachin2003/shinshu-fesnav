@@ -92,7 +92,7 @@ def google_auth():
             "user_id": user.id,
             "email": user.email,
             "display_name": user.display_name,
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7),
+            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7),
         },
         current_app.config["SECRET_KEY"],
         algorithm="HS256",
@@ -107,15 +107,15 @@ def google_auth():
 
 @oauth_bp.route("/line", methods=["GET"])
 def line_login_url():
-    line_auth_url = (
-        "https://access.line.me/oauth2/v2.1/authorize"
-        "?response_type=code"
-        f"&client_id={current_app.config['LINE_CHANNEL_ID']}"
-        f"&redirect_uri={current_app.config['LINE_REDIRECT_URI']}"
-        "&state=LINE_LOGIN"
-        "&scope=profile%20openid%20email"
-    )
-    return jsonify({"url": line_auth_url})
+    params = {
+        "response_type": "code",
+        "client_id": current_app.config["LINE_CHANNEL_ID"],
+        "redirect_uri": current_app.config["LINE_REDIRECT_URI"],
+        "state": "LINE_LOGIN",
+        "scope": "profile openid email",
+    }
+    auth_url = "https://access.line.me/oauth2/v2.1/authorize?" + urlencode(params)
+    return jsonify({"url": auth_url})
 
 @oauth_bp.route("/line", methods=["POST"])
 def line_auth():
@@ -189,7 +189,7 @@ def line_auth():
             "email": user.email,
             "display_name": user.display_name,
             "login_type": "line",
-            "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7),
+            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7),
         },
         current_app.config["SECRET_KEY"],
         algorithm="HS256",
