@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "tunnel": "ssh -L 3316:127.0.0.1:3316 j22069yn@133.242.152.98 -N",
+    "tunnel": "ssh -4 -L 3316:127.0.0.1:3316 j22069yn@133.242.152.98 -N",
     "sync:env": "scp -i ~/.ssh/id_ed25519 j22069yn@133.242.152.98:/home/j22069yn/shinshu-fesnav/.env.local ./backend/.env.local",
     "predev": "npm run sync:env",
     "backend:dev": "cd backend && cross-env PYTHONUNBUFFERED=1 pipenv run flask run --debug --cert=adhoc --host=0.0.0.0",

@@ -47,7 +47,7 @@ def create_app():
         db_name = os.getenv("MYSQL_DATABASE")
 
         if db_user and db_password and db_host and db_name:
-            mysql_url = f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port or 3306}/{db_name}"
+            mysql_url = f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port or 3316}/{db_name}"
 
     if not os.path.exists(app.instance_path):
         os.makedirs(app.instance_path)
