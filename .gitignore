@@ -21,3 +21,5 @@ start.sh
 docker-compose.yml
 docker-build.sh
 mysql_data/
+nginx.conf
+*.sh
