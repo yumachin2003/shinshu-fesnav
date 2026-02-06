@@ -1,18 +1,23 @@
 import React, { useState, useContext, useEffect } from "react";
 import { HoverCard, Button, Stack, Text, Anchor } from '@mantine/core';
-import { useLocation, Link } from "react-router-dom"; // Link をインポート
+import { useLocation } from "react-router-dom"; // Link をインポート
 import { useMediaQuery } from '@mantine/hooks';
-import { IconUser } from '@tabler/icons-react';
+import { IconUser, IconLayoutDashboard, IconRosetteDiscountCheckFilled } from '@tabler/icons-react';
 import { UserContext } from "../UserContext";
 import { useLogout } from "../hooks/useLogout";
+
+import '../css/GlassStyle.css';
 
 export default function AccountHoverCard() {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const { user, openLogin, openRegister, loginOpened, registerOpened } = useContext(UserContext);
   const [opened, setOpened] = useState(false);
   const location = useLocation();
-  const isAccountPage = location.pathname === "/account";
   const logout = useLogout();
+
+  const isAdmin = user?.username === "root" || user?.is_admin;
+  const targetPath = isAdmin ? "/admin/dashboard" : "/account";
+  const isActive = location.pathname === targetPath;
 
   useEffect(() => {
     if (loginOpened || registerOpened) {
@@ -31,29 +36,33 @@ export default function AccountHoverCard() {
         closeDelay={200}
         opened={opened}
         onChange={setOpened}
-        disabled={isAccountPage}
+        zIndex={2000}
       >
         <HoverCard.Target>
           {/* ★ component={Link} と to="/account" を追加 */}
           <Button 
-            component={Link} 
-            to="/account"
-            variant={isAccountPage ? "light" : "subtle"}
-            leftSection={<IconUser size={18} />} 
+            component="a" 
+            href={targetPath}
+            variant={isActive ? "light" : "subtle"}
+            leftSection={isAdmin ? <IconLayoutDashboard size={18} /> : <IconUser size={18} />} 
             px={isMobile ? 8 : undefined}
             onClick={() => setOpened(false)} // クリック時にメニューを閉じる
           >
-            {!isMobile && "アカウント"}
+            {!isMobile && (isAdmin ? "管理" : "アカウント")}
           </Button>
         </HoverCard.Target>
-        <HoverCard.Dropdown>
+        <HoverCard.Dropdown className="glass-dropdown">
           <Stack gap="xs">
-            <Text size="sm" fw={500}>ログイン中</Text>
-            <Text size="xs" c="dimmed">ユーザー名: {user.display_name || user.username}</Text>
-            {/* 詳細ページへの導線としても機能 */}
-            <Button component={Link} to="/account" variant="light" size="xs" fullWidth onClick={() => setOpened(false)}>
-              アカウント設定
-            </Button>
+            <Text size="sm" fw={500} c="var(--glass-text)">{isAdmin ? "管理者アカウントでログイン中" : "ログイン中"}</Text>
+            <Text size="xs" c="dimmed" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {user.display_name || user.username}
+              {isAdmin && <IconRosetteDiscountCheckFilled size={14} color="var(--glass-text-dimmed)" />}
+            </Text>
+            {!isAdmin && (
+              <Button component="a" href="/account" variant="light" size="xs" fullWidth onClick={() => setOpened(false)}>
+                アカウント設定
+              </Button>
+            )}
             <Button variant="outline" color="red" size="xs" fullWidth onClick={() => {
               setOpened(false);
               logout();
@@ -76,6 +85,7 @@ export default function AccountHoverCard() {
       closeDelay={200}
       opened={opened}
       onChange={setOpened}
+      zIndex={2000}
     >
       <HoverCard.Target>
         <Button 
@@ -87,16 +97,16 @@ export default function AccountHoverCard() {
           {!isMobile && "アカウント"}
         </Button>
       </HoverCard.Target>
-      <HoverCard.Dropdown>
+      <HoverCard.Dropdown className="glass-dropdown">
         <Stack gap="xs">
-          <Text size="sm" fw={500}>ログインしていません</Text>
+          <Text size="sm" fw={500} c="var(--glass-text)">ログインしていません</Text>
           <Button variant="outline" color="blue" size="xs" fullWidth onClick={() => {
             setOpened(false);
             openLogin();
           }}>
             ログイン
           </Button>
-          <Text size="xs" ta="center" mt={5}>
+          <Text size="xs" ta="center" mt={5} c="var(--glass-text)">
             または: 
             <Anchor component="button" type="button" size="xs" ml={5} onClick={() => {
               setOpened(false);

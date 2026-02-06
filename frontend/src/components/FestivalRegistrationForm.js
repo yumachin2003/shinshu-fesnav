@@ -8,6 +8,7 @@ const INITIAL_STATE = {
   date: '',
   location: '',
   description: '',
+  image_url: '',
   access: '',
   attendance: '',
   latitude: '',
@@ -67,6 +68,7 @@ function FestivalRegistrationForm({ onFestivalAdded, festivalData }) {
           <TextInput label="お祭り名" placeholder="お祭り名を入力" withAsterisk {...form.getInputProps('name')} />
           <TextInput type="date" label="開催日" placeholder="開催日を選択" withAsterisk {...form.getInputProps('date')} />
           <TextInput label="開催場所" placeholder="開催場所を入力" withAsterisk {...form.getInputProps('location')} />
+          <TextInput label="画像URL" placeholder="https://example.com/image.jpg" {...form.getInputProps('image_url')} />
           <Textarea label="お祭りの説明" placeholder="お祭りの説明を入力" autosize minRows={3} {...form.getInputProps('description')} />
           <TextInput label="アクセス方法" placeholder="アクセス方法を入力" {...form.getInputProps('access')} />
           <NumberInput label="予想動員数" placeholder="半角数字で入力" {...form.getInputProps('attendance')} />

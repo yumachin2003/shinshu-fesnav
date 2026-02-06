@@ -1,17 +1,16 @@
-import React, { useEffect, useState, useContext, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { Container, Title, Text, Button, Group, List, Alert, SegmentedControl, Center, Box, Stack, TextInput, PasswordInput, Divider, Paper } from '@mantine/core';
-import { modals } from '@mantine/modals';
+import React, { useEffect, useContext } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Container, Title, Text, Button, Group, Card, ThemeIcon, SimpleGrid, useMantineColorScheme } from '@mantine/core';
 import { UserContext } from "../UserContext";
-import { getFestivals, getAccountData, updateFavorites, getEditLogs, addEditLogToBackend, updateProfile, getUserPasskeys, deletePasskey } from "../utils/apiService";
-import useApiData from '../hooks/useApiData';
 import { IconLogout, IconHeart, IconHistory, IconSettings } from '@tabler/icons-react';
 import { useLogout } from "../hooks/useLogout";
-import PasskeyButton from "../components/PasskeyButton";
+import '../css/GlassStyle.css';
 
 export default function Account() {
   const { user } = useContext(UserContext);
   const navigate = useNavigate();
+  const { colorScheme } = useMantineColorScheme();
+  const isAdmin = user?.is_admin;
 
   // --- ログインチェックとリダイレクト ---
   useEffect(() => {
@@ -21,162 +20,37 @@ export default function Account() {
     }
   }, [user, navigate]);
 
-  // --- APIデータ取得 ---
-  const { data: festivals, loading: festivalsLoading, error: festivalsError } = useApiData(getFestivals);
-  const { data: accountData, loading: accountLoading, error: accountError } = useApiData(
-    getAccountData,
-    [user?.id],
-    !user // userがいない場合はfetchスキップ
-  );
-  const { data: fetchedEditLogs, loading: editLogsLoading, error: editLogsError, refetch: refetchEditLogs } = useApiData(
-    getEditLogs,
-    [user?.id],
-    !user
-  );
-  const { data: passkeys, loading: passkeysLoading, error: passkeysError, refetch: refetchPasskeys } = useApiData(
-    getUserPasskeys,
-    [user?.id],
-    !user
-  );
-
-  // --- State ---
-  const [favorites, setFavorites] = useState({});
-  const [editLogs, setEditLogs] = useState([]);
-  const [showAllLogs, setShowAllLogs] = useState(false);
-  const [activeTab, setActiveTab] = useState('favorites');
-  const [newUsername, setNewUsername] = useState(user?.display_name || user?.username || "");
-  const [newEmail, setNewEmail] = useState(user?.email || "");
-  const [newPassword, setNewPassword] = useState("");
-
-  // --- アカウントデータ反映 ---
-  useEffect(() => {
-    if (accountData) {
-      setFavorites(accountData.favorites || {});
-    }
-  }, [accountData]);
-
-  useEffect(() => {
-    if (fetchedEditLogs) setEditLogs(fetchedEditLogs);
-  }, [fetchedEditLogs]);
-
-  useEffect(() => {
-    if (user) {
-      setNewUsername(user.display_name || user.username || "");
-      setNewEmail(user.email || "");
-    }
-  }, [user]);
-
-  // --- データ保存関数 ---
-  const saveFavorites = async (updated) => {
-    setFavorites(updated);
-    await updateFavorites(updated).catch(err => console.error("お気に入りの更新に失敗", err));
-  };
-
   const logout = useLogout();
 
-  const logEditAction = async (festival, content) => {
-    if (!user || !festival) return;
-    const newLogData = { festival_id: festival.id, festival_name: festival.name, content, date: new Date().toISOString() };
-    try { await addEditLogToBackend(newLogData); refetchEditLogs(); }
-    catch (error) { console.error("編集履歴の保存に失敗:", error); }
-  };
-
-  // --- CSV出力 ---
-  const handleExportCSV = () => {
-    if (editLogs.length === 0) { alert("出力する編集履歴がありません。"); return; }
-    const headers = ["お祭り名", "編集内容", "日時"];
-    const rows = editLogs.map(log => [`"${log.festival}"`, `"${log.content.replace(/"/g,'""')}"`, `"${log.date}"`]);
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `festivalEditLogs.csv`; a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleUpdateProfile = async () => {
-    try {
-      await updateProfile({
-        username: newUsername,
-        email: newEmail,
-        password: newPassword || undefined
-      });
-      alert("プロフィールを更新しました");
-      setNewPassword(""); // パスワード入力欄をクリア
-    } catch (err) {
-      console.error("更新失敗:", err);
-      alert("更新に失敗しました: " + (err.response?.data?.error || err.message));
-    }
-  };
-
-  const handleDeletePasskey = async (e, id) => {
-    e.preventDefault();
-    e.stopPropagation();
-    modals.openConfirmModal({
-      title: 'パスキーの削除',
-      centered: true,
-      children: (
-        <Text size="sm">
-          このパスキーを削除しますか？この操作は取り消せません。
-        </Text>
-      ),
-      labels: { confirm: '削除する', cancel: 'キャンセル' },
-      confirmProps: { color: 'red' },
-      onConfirm: async () => {
-        console.log("Confirmation received. Sending DELETE request...");
-        try {
-          await deletePasskey(id);
-          console.log("DELETE request successful.");
-          refetchPasskeys();
-        } catch (err) {
-          console.error("Passkey deletion failed:", err);
-          alert("削除に失敗しました: " + err.message);
-        }
-      },
-    });
-  };
-
-  const segmentData = useMemo(() => [
+  const accountModules = [
     {
-      value: 'favorites',
-      label: (
-        <Center>
-          <IconHeart size="1rem" />
-          <Box ml="xs">お気に入り</Box>
-        </Center>
-      ),
+      title: 'お気に入り',
+      description: 'お気に入り登録したお祭りの一覧を確認・管理します。',
+      icon: <IconHeart size="2rem" />,
+      link: '/account/favorites',
+      color: 'red',
     },
     {
-      value: 'logs',
-      label: (
-        <Center>
-          <IconHistory size="1rem" />
-          <Box ml="xs">編集履歴</Box>
-        </Center>
-      ),
+      title: '編集履歴',
+      description: '過去に行ったお祭り情報の編集や提供の履歴を確認します。',
+      icon: <IconHistory size="2rem" />,
+      link: '/account/logs',
+      color: 'blue',
     },
     {
-      value: 'settings',
-      label: (
-        <Center>
-          <IconSettings size="1rem" />
-          <Box ml="xs">設定</Box>
-        </Center>
-      ),
+      title: 'アカウント設定',
+      description: 'プロフィール情報の変更やソーシャル連携、パスキーの設定を行います。',
+      icon: <IconSettings size="2rem" />,
+      link: '/account/settings',
+      color: 'gray',
     },
-  ], []);
-
-  // --- ローディング／エラー ---
-  if (!user) return <Container><Text>ログイン情報を確認しています...</Text></Container>;
-  if (festivalsLoading || accountLoading || editLogsLoading) return <Container><Text>データを読み込み中...</Text></Container>;
-  if (festivalsError || accountError || editLogsError || passkeysError) return <Container><Alert color="red" title="エラー">データの読み込みに失敗しました</Alert></Container>;
+  ];
 
   // --- UI ---
   return (
-    <Container>
-      <div id="google_translate_element" style={{ position: "fixed", bottom: 10, right: 10, zIndex: 9999 }}></div>
-
+    <Container size="lg" py="xl">
       <Group justify="space-between" align="center" my="xl">
-        <Title order={2}>{user.display_name ?? user.username} さんのマイページ</Title>
+        <Title order={1} c={colorScheme === 'dark' ? 'white' : 'dark'}>{user?.username ?? user?.username} さんのマイページ</Title>
         <Button 
           leftSection={<IconLogout size={16} />} 
           color="red" 
@@ -184,7 +58,6 @@ export default function Account() {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log("Logout button clicked");
             logout();
           }}
         >
@@ -192,109 +65,35 @@ export default function Account() {
         </Button>
       </Group>
 
-      <Group justify="center" mb="xl">
-        <SegmentedControl
-          value={activeTab}
-          onChange={setActiveTab}
-          data={segmentData}
-        />
-      </Group>
-
-      {activeTab === 'favorites' && (
-        <Box pt="lg">
-          <List spacing="xs" size="sm" center>
-            {Object.entries(favorites).filter(([_, v]) => v).length === 0 && <Text>お気に入りのお祭りはまだありません。</Text>}
-            {Object.entries(favorites).filter(([_, v]) => v).map(([fid]) => {
-              const f = festivals.find(x => x.id === Number(fid));
-              return (
-                <List.Item key={fid}>
-                  <Group justify="space-between">
-                    <Text>{f?.name}</Text>
-                    <Button size="xs" variant="light" color="red" onClick={() => { saveFavorites({ ...favorites, [fid]: false }); logEditAction(f, "お気に入りを解除しました"); }}>お気に入り解除</Button>
-                  </Group>
-                </List.Item>
-              );
-            })}
-          </List>
-        </Box>
-      )}
-
-      {activeTab === 'logs' && (
-        <Box pt="lg">
-          <Group mb="md">
-            <Button onClick={() => setShowAllLogs(prev => !prev)} variant="outline">{showAllLogs ? "自分の履歴に戻す" : "全期間の履歴を見る"}</Button>
-            <Button onClick={handleExportCSV} variant="light" color="green">CSV形式で出力</Button>
-          </Group>
-          {editLogs.length === 0 ? <Text>まだ編集履歴はありません。</Text> :
-            <List spacing="xs" size="sm">
-              {editLogs.map((log, i) => (
-                <List.Item key={i}>
-                  <Text><strong>{log.festival}</strong> — {log.date}</Text>
-                  <Text c="dimmed">{log.content}</Text>
-                </List.Item>
-              ))}
-            </List>
-          }
-        </Box>
-      )}
-
-      {activeTab === 'settings' && (
-        <Box pt="lg">
-          <Stack maw={400} align="flex-start">
-            <TextInput
-              label="ユーザー名"
-              value={newUsername}
-              onChange={(e) => setNewUsername(e.currentTarget.value)}
-            />
-            <TextInput
-              label="メールアドレス"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.currentTarget.value)}
-            />
-            <PasswordInput
-              label="新しいパスワード"
-              placeholder="変更する場合のみ入力"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.currentTarget.value)}
-            />
-            <Button onClick={handleUpdateProfile}>プロフィールを更新</Button>
-            
-            <Divider my="sm" label="パスキー設定" labelPosition="center" w="100%" />
-            <PasskeyButton 
-              action="register" 
-              username={user?.username} 
-              variant="outline" 
-              color="blue"
-              fullWidth
-              onSuccess={() => {
-                alert('パスキーの登録に成功しました！');
-                refetchPasskeys();
-              }}
-              onError={(err) => alert('パスキー設定失敗: ' + err.message)}
-            >パスキーを設定する</PasskeyButton>
-
-            <Box w="100%" mt="xs">
-              <Text size="sm" fw={500} mb={5}>登録済みデバイス</Text>
-              {passkeysLoading ? <Text size="xs">読み込み中...</Text> : (
-                <Stack gap={5}>
-                  {Array.isArray(passkeys) && passkeys.length > 0 ? passkeys.map(pk => (
-                    <Paper key={pk.id} withBorder p="xs" radius="sm">
-                      <Group justify="space-between" wrap="nowrap">
-                        <Text size="xs" c="dimmed" truncate style={{ flex: 1 }}>
-                          ID: {pk.credential_id?.substring(0, 20) || '不明'}...
-                        </Text>
-                        <Button size="compact-xs" color="red" variant="light" onClick={(e) => handleDeletePasskey(e, pk.id)}>削除</Button>
-                      </Group>
-                    </Paper>
-                  )) : (
-                    <Text size="xs" c="dimmed" ta="center">登録されたパスキーはありません</Text>
-                  )}
-                </Stack>
-              )}
-            </Box>
-          </Stack>
-        </Box>
-      )}
+      <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="lg">
+        {accountModules.map((module) => (
+          <Card
+            key={module.title}
+            shadow="sm"
+            padding="xl"
+            radius="md"
+            withBorder
+            component="a"
+            href={module.link}
+            className="glass-panel"
+            style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}
+          >
+            <Group>
+              <ThemeIcon size={50} radius="md" color={module.color} variant="light">
+                {module.icon}
+              </ThemeIcon>
+              <div>
+                <Text fw={500} size="lg" c={colorScheme === 'dark' ? 'white' : 'dark'}>
+                  {module.title}
+                </Text>
+                <Text size="sm" c="dimmed">
+                  {module.description}
+                </Text>
+              </div>
+            </Group>
+          </Card>
+        ))}
+      </SimpleGrid>
     </Container>
   );
 }

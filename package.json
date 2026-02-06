@@ -6,16 +6,18 @@
     "tunnel": "ssh -4 -L 3316:127.0.0.1:3316 j22069yn@133.242.152.98 -N",
     "sync:env": "scp -i ~/.ssh/id_ed25519 j22069yn@133.242.152.98:/home/j22069yn/shinshu-fesnav/.env.local ./backend/.env.local",
     "predev": "npm run sync:env",
-    "backend:dev": "cd backend && cross-env PYTHONUNBUFFERED=1 pipenv run flask run --debug --cert=adhoc --host=0.0.0.0",
+    "backend:dev": "cd backend && cross-env PYTHONUNBUFFERED=1 pipenv run flask run --debug --host=0.0.0.0",
     "backend:prod": "cd backend && cross-env FLASK_ENV=production pipenv run gunicorn --workers 4 --bind 0.0.0.0:5052 \"app:create_app()\"",
     "frontend": "cd frontend && cross-env DEBUG=http-proxy-middleware* npm start",
     "sync:db": "wait-on tcp:127.0.0.1:3316 && echo 'Tunnel connected, syncing DB...' && cd backend && pipenv run flask sync-db",
     "build-frontend": "cd frontend && npm run build",
-    "dev": "concurrently --kill-others-on-fail --handle-input --kill-signal SIGINT \"npm:tunnel\" \"npm:backend:dev\" \"npm:frontend\" \"npm:sync:db\"",
+    "qr": "node ShowQR.js",
+    "dev": "concurrently --kill-others-on-fail --handle-input --kill-signal SIGINT \"npm:tunnel\" \"npm:backend:dev\" \"npm:frontend\" \"npm:sync:db\" \"npm:qr\"",
     "prod": "npm run build-frontend && npm run backend:prod"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
+    "qrcode-terminal": "^0.12.0",
     "wait-on": "^7.2.0"
   },
   "dependencies": {

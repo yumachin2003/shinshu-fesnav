@@ -55,22 +55,30 @@ class User(db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(120), unique=True, nullable=False)
+    userID = db.Column(db.String(120), unique=True, nullable=False)
+    username = db.Column(db.String(120), unique=False, nullable=True)
 
     # メールアドレス
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=True)
 
-    # ローカルログイン用（Googleログインでは NULL）
+    # パスワード
     password_hash = db.Column(db.String(255), nullable=True)
 
-    # Google 表示名
-    display_name = db.Column(db.String(120), nullable=True)
-
-    # ⭐ LINEログイン用
+    # LINEログイン用
     line_user_id = db.Column(db.String(255), unique=True, nullable=True)
 
-    # ⭐ Googleログイン用
+    # Googleログイン用
     google_user_id = db.Column(db.String(255), unique=True, nullable=True)
+
+    # 管理者権限フラグ
+    is_admin = db.Column(db.Boolean, default=False)
+
+    # 最終ログイン日時
+    last_login_at = db.Column(db.DateTime, nullable=True)
+
+    @property
+    def is_administrator(self):
+        return self.is_admin or self.username == 'root'
 
     def set_password(self, password):
         self.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")

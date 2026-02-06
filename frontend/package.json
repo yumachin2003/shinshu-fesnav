@@ -1,6 +1,6 @@
 {
   "name": "shinshu-fesnav",
-  "version": "0.1.0",
+  "version": "1.0",
   "private": true,
   "dependencies": {
     "@fullcalendar/daygrid": "^6.1.19",
@@ -8,10 +8,12 @@
     "@fullcalendar/list": "^6.1.19",
     "@fullcalendar/react": "^6.1.19",
     "@fullcalendar/timegrid": "^6.1.19",
-    "@mantine/core": "^8.3.9",
-    "@mantine/form": "^8.3.9",
-    "@mantine/hooks": "^8.3.9",
-    "@mantine/modals": "^8.3.13",
+    "@mantine/core": "^8.3.14",
+    "@mantine/dates": "^8.3.14",
+    "@mantine/form": "^8.3.14",
+    "@mantine/hooks": "^8.3.14",
+    "@mantine/modals": "^8.3.14",
+    "@mantine/notifications": "^8.3.14",
     "@react-google-maps/api": "^2.20.7",
     "@simplewebauthn/browser": "^13.2.2",
     "@tabler/icons-react": "^3.35.0",
@@ -20,7 +22,6 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.13.2",
-    "http-proxy-middleware": "^3.0.3",
     "leaflet": "^1.9.4",
     "postcss": "^8.5.6",
     "postcss-preset-mantine": "^1.18.0",
@@ -57,6 +58,7 @@
     ]
   },
   "devDependencies": {
-    "cross-env": "^10.1.0"
+    "cross-env": "^10.1.0",
+    "http-proxy-middleware": "^2.0.6"
   }
 }

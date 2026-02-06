@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app, g, session, send_from_directory
+from flask import Blueprint, request, jsonify, current_app, g, session, send_from_directory, make_response
 from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey, FestivalPhoto
 from datetime import datetime, timedelta, timezone
 from . import db, mail, limiter
@@ -14,6 +14,7 @@ import uuid
 from werkzeug.utils import secure_filename
 import re
 from urllib.parse import urlparse
+from sqlalchemy import func
 
 # 'api'という名前でBlueprintを作成
 api_bp = Blueprint('api', __name__, url_prefix='/api')
@@ -103,6 +104,12 @@ def get_festivals():
             photos_map[p.festival_id] = []
         photos_map[p.festival_id].append(p.to_dict())
 
+    # お気に入り数を一括取得
+    fav_counts = db.session.query(
+        UserFavorite.festival_id, func.count(UserFavorite.id)
+    ).group_by(UserFavorite.festival_id).all()
+    fav_map = {fid: count for fid, count in fav_counts}
+
     festival_list = []
     for festival in festivals_query:
         festival_data = {
@@ -110,7 +117,8 @@ def get_festivals():
             'location': festival.location, 'latitude': festival.latitude, 'longitude': festival.longitude, 'attendance': festival.attendance,
             'description': festival.description, # レスポンスに追加
             'access': festival.access, # レスポンスに追加
-            'photos': photos_map.get(festival.id, []) # 写真データを追加
+            'photos': photos_map.get(festival.id, []), # 写真データを追加
+            'favorites': fav_map.get(festival.id, 0) # お気に入り数を追加
         }
 
         festival_list.append(festival_data)
@@ -122,7 +130,7 @@ def get_festivals():
 @token_required
 def add_festival():
     # --- root 以外は 403 Forbidden ---
-    if g.current_user.username != "root":
+    if not g.current_user.is_administrator:
         return jsonify({'error': '権限がありません（root のみ追加可能）'}), 403
 
     data = request.get_json()
@@ -173,33 +181,124 @@ def add_festival():
     db.session.commit()
     return jsonify(new_festival.to_dict()), 201
 
-# DELETE /api/festivals/<int:festival_id> : お祭りを削除
-@api_bp.route('/festivals/<int:festival_id>', methods=['DELETE'])
+# PUT, DELETE /api/festivals/<int:festival_id>
+@api_bp.route('/festivals/<int:festival_id>', methods=['PUT', 'DELETE'])
 @token_required
-def delete_festival(festival_id):
-    # 権限チェック (必要に応じて有効化)
-    # if g.current_user.username != "root":
-    #     return jsonify({'error': '権限がありません'}), 403
+def manage_festival(festival_id):
+    # rootユーザーのみ許可
+    if not g.current_user.is_administrator:
+        return jsonify({'error': '権限がありません'}), 403
 
     festival = Festivals.query.get(festival_id)
     if not festival:
         return jsonify({'error': 'Festival not found'}), 404
 
-    # 関連データの削除
-    UserFavorite.query.filter_by(festival_id=festival_id).delete()
-    Review.query.filter_by(festival_id=festival_id).delete()
-    FestivalPhoto.query.filter_by(festival_id=festival_id).delete()
+    if request.method == 'PUT':
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        # 各フィールドを更新
+        festival.name = data.get('name', festival.name)
+        festival.location = data.get('location', festival.location)
+        festival.description = data.get('description', festival.description)
+        festival.access = data.get('access', festival.access)
+        festival.attendance = data.get('attendance', festival.attendance)
+        festival.latitude = data.get('latitude', festival.latitude)
+        festival.longitude = data.get('longitude', festival.longitude)
+
+        if data.get('date'):
+            try:
+                festival.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+            except (ValueError, TypeError):
+                pass # 日付形式が不正な場合は無視
+        
+        db.session.commit()
+        return jsonify(festival.to_dict()), 200
+
+    elif request.method == 'DELETE':
+        # 関連データの削除
+        UserFavorite.query.filter_by(festival_id=festival_id).delete()
+        Review.query.filter_by(festival_id=festival_id).delete()
+        FestivalPhoto.query.filter_by(festival_id=festival_id).delete()
+        
+        db.session.delete(festival)
+        db.session.commit()
+        return jsonify({'message': 'Festival deleted successfully'}), 200
+
+# GET /api/festivals/<int:festival_id>/ics : iCal形式のファイルを配信（webcal用）
+@api_bp.route('/festivals/<int:festival_id>/ics', methods=['GET'])
+def get_festival_ics(festival_id):
+    festival = Festivals.query.get(festival_id)
+    if not festival:
+        return jsonify({'error': 'Not found'}), 404
     
-    db.session.delete(festival)
+    if not festival.date:
+        return jsonify({'error': 'Date not set'}), 400
+        
+    date_str = festival.date.strftime('%Y%m%d')
+    next_day = festival.date + timedelta(days=1)
+    next_day_str = next_day.strftime('%Y%m%d')
+    now_str = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+    
+    ics_content = f"""BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Festival Calendar//JP
+BEGIN:VEVENT
+UID:{festival.id}@festival.jp
+DTSTAMP:{now_str}
+DTSTART;VALUE=DATE:{date_str}
+DTEND;VALUE=DATE:{next_day_str}
+SUMMARY:{festival.name}
+LOCATION:{festival.location}
+DESCRIPTION:{festival.name}（{festival.location}）のお祭りです。
+BEGIN:VALARM
+TRIGGER:-P1D
+ACTION:DISPLAY
+DESCRIPTION:Reminder
+END:VALARM
+END:VEVENT
+END:VCALENDAR"""
+
+    response = make_response(ics_content)
+    response.headers["Content-Type"] = "text/calendar; charset=utf-8"
+    response.headers["Content-Disposition"] = f"attachment; filename=festival_{festival.id}.ics"
+    return response
+
+# POST /api/festivals/bulk-update-year : 全てのお祭りの年を一括更新
+@api_bp.route('/festivals/bulk-update-year', methods=['POST'])
+@token_required
+def bulk_update_year():
+    if not g.current_user.is_administrator:
+        return jsonify({'error': '権限がありません'}), 403
+
+    data = request.get_json()
+    target_year = data.get('year')
+
+    if not target_year:
+        return jsonify({'error': 'Year is required'}), 400
+
+    festivals = Festivals.query.all()
+    count = 0
+    for f in festivals:
+        if f.date:
+            try:
+                f.date = f.date.replace(year=int(target_year))
+            except ValueError:
+                # うるう年(2/29)から平年への変更時の対応 -> 2/28にする
+                if f.date.month == 2 and f.date.day == 29:
+                    f.date = f.date.replace(year=int(target_year), day=28)
+            count += 1
+
     db.session.commit()
-    return jsonify({'message': 'Festival deleted successfully'}), 200
+    return jsonify({'message': f'{count}件のお祭りを{target_year}年に更新しました'}), 200
 
 # POST /api/festivals/<festival_id>/photos : お祭りの写真をアップロード
 @api_bp.route('/festivals/<int:festival_id>/photos', methods=['POST'])
 @token_required
 def upload_festival_photo(festival_id):
     # root ユーザーのみ許可（必要に応じて変更してください）
-    if g.current_user.username != "root":
+    if not g.current_user.is_administrator:
         return jsonify({'error': '権限がありません'}), 403
 
     if 'photo' not in request.files:
@@ -238,7 +337,7 @@ def upload_festival_photo(festival_id):
 @api_bp.route('/photos/<int:photo_id>', methods=['DELETE'])
 @token_required
 def delete_photo(photo_id):
-    if g.current_user.username != "root":
+    if not g.current_user.is_administrator:
         return jsonify({'error': '権限がありません'}), 403
         
     photo = FestivalPhoto.query.get(photo_id)
@@ -291,21 +390,26 @@ def register():
     if not data:
         return jsonify({'error': 'リクエストボディが不正なJSON形式か空です'}), 400
 
-    username = data.get('username')
+    user_id = data.get('username') # フロントエンドは 'username' キーでIDを送信
+    display_name = data.get('display_name')
     email = data.get('email')
     password = data.get('password')
 
     # バリデーションを最初に行う
-    if not username or not password:
-        return jsonify({'error': 'ユーザー名とパスワードは必須です'}), 400
+    if not user_id or not password:
+        return jsonify({'error': 'ユーザーIDとパスワードは必須です'}), 400
 
-    if User.query.filter_by(username=username).first():
-        return jsonify({'error': 'このユーザー名は既に使用されています'}), 400
+    # ユーザーIDのバリデーション (4文字以上の半角英数字・ピリオド・アンダーバー)
+    if not re.match(r'^[a-zA-Z0-9._]{4,}$', user_id):
+        return jsonify({'error': 'ユーザーIDは4文字以上の半角英数字、ピリオド、アンダーバーのみ使用可能です'}), 400
+
+    if User.query.filter_by(userID=user_id).first():
+        return jsonify({'error': 'このユーザーIDは既に使用されています'}), 400
     
     if email and User.query.filter_by(email=email).first():
         return jsonify({'error': 'このメールアドレスは既に登録されています'}), 400
 
-    new_user = User(username=username, email=email)
+    new_user = User(userID=user_id, username=display_name, email=email)
     new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()
@@ -316,29 +420,33 @@ def register():
 @api_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-    username = data.get('username')
+    identifier = data.get('username') # フロントエンドからの入力(ID)
     password = data.get('password')
 
-    if not username or not password:
-        return jsonify({'error': 'ユーザー名とパスワードを入力してください'}), 400
+    if not identifier or not password:
+        return jsonify({'error': 'ユーザーIDとパスワードを入力してください'}), 400
 
-    # ユーザー名またはメールアドレスで検索
-    user = User.query.filter_by(username=username).first() or User.query.filter_by(email=username).first()
+    # ユーザーIDまたはメールアドレスで検索
+    user = User.query.filter_by(userID=identifier).first() or User.query.filter_by(email=identifier).first()
 
     # ユーザーが存在し、かつパスワードが一致するかチェック
     if user and user.check_password(password):
+        # 最終ログイン日時を更新
+        user.last_login_at = datetime.now(timezone.utc)
+        db.session.commit()
+
         # JWTトークンを生成
         token = pyjwt.encode({
             'user_id': user.id,
             'email': user.email,
-            'display_name': user.display_name or user.username,
+            'display_name': user.username,
             'exp': datetime.now(timezone.utc) + timedelta(hours=24) # トークンの有効期限は24時間
         }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
         # フロントエンドが期待する形式でレスポンスを返す
         return jsonify({
             "token": token,
-            "user": { "id": user.id, "username": user.username, "email": user.email, "display_name": user.display_name }
+            "user": { "id": user.id, "username": user.userID, "userID": user.userID, "email": user.email, "display_name": user.username, "is_admin": user.is_administrator }
         })
 
     return jsonify({'error': 'ユーザー名またはパスワードが正しくありません'}), 401
@@ -357,6 +465,8 @@ def get_account_data():
 
     return jsonify({
         'favorites': favorites,
+        'google_connected': bool(g.current_user.google_user_id),
+        'line_connected': bool(g.current_user.line_user_id)
     }), 200
 
 # POST /api/account/favorites : お気に入り情報を更新
@@ -390,15 +500,21 @@ def update_profile():
     user = g.current_user
     data = request.get_json()
 
-    new_username = data.get('username')
+    new_user_id = data.get('username') # フロントエンドは 'username' キーでIDを送信
+    new_display_name = data.get('display_name')
     new_email = data.get('email')
     new_password = data.get('password')
 
-    if new_username and new_username != user.username:
-        if User.query.filter_by(username=new_username).first():
-            return jsonify({'error': 'このユーザー名は既に使用されています'}), 400
-        user.username = new_username
-        user.display_name = new_username # 表示名も同期させる例
+    if new_user_id and new_user_id != user.userID:
+        if not re.match(r'^[a-zA-Z0-9._]{4,}$', new_user_id):
+            return jsonify({'error': 'ユーザーIDは4文字以上の半角英数字、ピリオド、アンダーバーのみ使用可能です'}), 400
+            
+        if User.query.filter_by(userID=new_user_id).first():
+            return jsonify({'error': 'このユーザーIDは既に使用されています'}), 400
+        user.userID = new_user_id
+
+    if new_display_name:
+        user.username = new_display_name
 
     if new_email and new_email != user.email:
         if User.query.filter_by(email=new_email).first():
@@ -411,7 +527,7 @@ def update_profile():
     db.session.commit()
     return jsonify({
         'message': 'プロフィールを更新しました',
-        'user': {'id': user.id, 'username': user.username, 'email': user.email, 'display_name': user.display_name}
+        'user': {'id': user.id, 'username': user.userID, 'userID': user.userID, 'email': user.email, 'display_name': user.username, 'is_admin': user.is_administrator}
     }), 200
 
 # --- Passkey (WebAuthn) API ---
@@ -430,7 +546,7 @@ def passkey_register_options():
             pass
 
     data = request.get_json()
-    username = user.username if user else data.get('username')
+    username = user.userID if user else data.get('username') # IDを使用
     email = data.get('email')
     
     if not username:
@@ -441,7 +557,7 @@ def passkey_register_options():
     options = webauthn.generate_registration_options(
         rp_id=rp_id,
         rp_name="信州おまつりナビ",
-        user_id=str(user.id if user else username).encode(),
+        user_id=str(user.id if user else username).encode(), # user.id (DB PK) を推奨するが、新規時はusername(ID)を使用
         user_name=username,
         user_display_name=username,
         attestation=webauthn.helpers.structs.AttestationConveyancePreference.NONE,
@@ -504,9 +620,9 @@ def passkey_register_verify():
             # クライアント側から送られたID（ここではusernameをIDとして使用した想定）
             username = reg_data.get('response', {}).get('userHandle') # 本来はIDをデコード
             # 簡易的に、optionsで指定した名前を使用（実際は検証結果から取得）
-            username = session.get('registration_username') or "new_user"
+            user_id = session.get('registration_username') or "new_user"
             email = session.get('registration_email')
-            user = User(username=username, email=email)
+            user = User(userID=user_id, username=user_id, email=email) # userIDとdisplay_nameを同じに設定
             db.session.add(user)
             db.session.flush() # IDを確定させる
 
@@ -529,9 +645,9 @@ def passkey_register_verify():
 @api_bp.route('/login/options', methods=['POST'])
 def passkey_login_options():
     data = request.get_json()
-    username = data.get('username')
+    identifier = data.get('username')
     
-    user = User.query.filter_by(username=username).first() or User.query.filter_by(email=username).first()
+    user = User.query.filter_by(userID=identifier).first() or User.query.filter_by(email=identifier).first()
     if not user:
         return jsonify({"error": "ユーザーが見つかりません"}), 404
     
@@ -557,7 +673,7 @@ def passkey_login_options():
     )
     
     session['authentication_challenge'] = base64.b64encode(options.challenge).decode('utf-8')
-    session['authentication_username'] = user.username # 確実に存在するusernameを保存
+    session['authentication_username'] = user.userID # 確実に存在するuserIDを保存
     
     return jsonify(json.loads(webauthn.options_to_json(options)))
 
@@ -565,12 +681,12 @@ def passkey_login_options():
 def passkey_login_verify():
     auth_data = request.get_json()
     challenge_b64 = session.get('authentication_challenge')
-    username = session.get('authentication_username')
+    user_id_val = session.get('authentication_username')
     
-    if not challenge_b64 or not username:
+    if not challenge_b64 or not user_id_val:
         return jsonify({"error": "セッションがタイムアウトしました。もう一度やり直してください。"}), 400
     
-    user = User.query.filter_by(username=username).first()
+    user = User.query.filter_by(userID=user_id_val).first()
     passkey = Passkey.query.filter_by(credential_id=auth_data.get('id')).first()
     
     if not passkey or passkey.user_id != user.id:
@@ -596,13 +712,17 @@ def passkey_login_verify():
         
         # sign_count 更新
         passkey.sign_count = verification.new_sign_count
+        
+        # 最終ログイン日時を更新
+        user.last_login_at = datetime.now(timezone.utc)
+        
         db.session.commit()
 
         # JWT発行
         token = pyjwt.encode({
             'user_id': user.id,
             'email': user.email,
-            'display_name': user.display_name or user.username,
+            'display_name': user.username or user.username,
             'exp': datetime.now(timezone.utc) + timedelta(hours=24)
         }, current_app.config['SECRET_KEY'], algorithm="HS256")
 
@@ -611,7 +731,7 @@ def passkey_login_verify():
 
         return jsonify({
             "token": token,
-            "user": { "id": user.id, "username": user.username, "email": user.email, "display_name": user.display_name }
+            "user": { "id": user.id, "username": user.userID, "userID": user.userID, "email": user.email, "display_name": user.username, "is_admin": user.is_administrator }
         }), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 400
@@ -632,7 +752,7 @@ def get_user_passkeys():
 @token_required
 def delete_passkey(passkey_id):
     user = g.current_user
-    print(f"DEBUG: Delete passkey request - ID: {passkey_id}, User: {user.username}")
+    print(f"DEBUG: Delete passkey request - ID: {passkey_id}, User: {user.userID}")
     
     passkey = db.session.get(Passkey, passkey_id)
     if not passkey or passkey.user_id != user.id:
@@ -702,7 +822,7 @@ def submit_information():
 @api_bp.route("/information", methods=["GET"])
 @token_required
 def get_information_list():
-    if g.current_user.username != "root":
+    if not g.current_user.is_administrator:
         return jsonify({"error": "forbidden"}), 403
 
     infos = InformationSubmission.query.order_by(
@@ -716,7 +836,7 @@ def get_information_list():
 @token_required
 def check_information(info_id):
     # rootユーザーのみ
-    if g.current_user.username != "root":
+    if not g.current_user.is_administrator:
         return jsonify({"error": "forbidden"}), 403
 
     info = InformationSubmission.query.get(info_id)
@@ -733,39 +853,130 @@ def check_information(info_id):
 @token_required
 def get_admin_users():
     # root ユーザーのみアクセス許可
-    if g.current_user.username != "root":
+    if not g.current_user.is_administrator:
         return jsonify({'error': '権限がありません'}), 403
     
     users = User.query.all()
     return jsonify([{
         'id': u.id,
-        'username': u.username,
-        'display_name': u.display_name,
-        'email': u.email
+        'username': u.userID, # フロントエンド互換性のため username キーに userID を入れる
+        'userID': u.userID,
+        'display_name': u.username,
+        'email': u.email,
+        'google_user_id': u.google_user_id,
+        'line_user_id': u.line_user_id,
+        'google_connected': bool(u.google_user_id),
+        'line_connected': bool(u.line_user_id),
+        'is_admin': u.is_administrator,
+        'passkey_registered': bool(Passkey.query.filter_by(user_id=u.id).first()),
+        'passkeys': [{'id': pk.id, 'credential_id': pk.credential_id, 'sign_count': pk.sign_count} for pk in Passkey.query.filter_by(user_id=u.id).all()],
+        'last_login_at': u.last_login_at.replace(tzinfo=timezone.utc).isoformat() if u.last_login_at else None
     } for u in users]), 200
 
-@api_bp.route('/admin/users/<int:user_id>', methods=['DELETE'])
+@api_bp.route('/admin/users', methods=['POST'])
 @token_required
-def delete_admin_user(user_id):
+def create_admin_user():
+    # root ユーザーまたは管理者のみアクセス許可
+    if not g.current_user.is_administrator:
+        return jsonify({'error': '権限がありません'}), 403
+
+    data = request.get_json()
+    user_id = data.get('username')
+    display_name = data.get('display_name')
+    email = data.get('email')
+    password = data.get('password')
+    
+    if not user_id or not password:
+        return jsonify({'error': 'ユーザーIDとパスワードは必須です'}), 400
+
+    if not re.match(r'^[a-zA-Z0-9._]{4,}$', user_id):
+        return jsonify({'error': 'ユーザーIDは4文字以上の半角英数字、ピリオド、アンダーバーのみ使用可能です'}), 400
+
+    if User.query.filter_by(userID=user_id).first():
+        return jsonify({'error': 'このユーザーIDは既に使用されています'}), 400
+
+    # 管理者として作成
+    new_user = User(userID=user_id, username=display_name or user_id, email=email, is_admin=True)
+    new_user.set_password(password)
+    
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({'message': '管理者ユーザーを作成しました', 'user': {'id': new_user.id, 'username': new_user.userID}}), 201
+
+@api_bp.route('/admin/users/<int:user_id>/role', methods=['POST'])
+@token_required
+def change_user_role(user_id):
+    if not g.current_user.is_administrator:
+        return jsonify({'error': '権限がありません'}), 403
+    
+    data = request.get_json()
+    is_admin_flag = data.get('is_admin')
+    
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    if user.userID == 'root':
+         return jsonify({'error': 'rootユーザーの権限は変更できません'}), 400
+         
+    user.is_admin = is_admin_flag
+    db.session.commit()
+    return jsonify({'message': 'Role updated'}), 200
+
+@api_bp.route('/admin/users/<int:user_id>', methods=['PUT', 'DELETE'])
+@token_required
+def manage_admin_user(user_id):
     # root ユーザーのみアクセス許可
-    if g.current_user.username != "root":
+    if not g.current_user.is_administrator:
         return jsonify({'error': '権限がありません'}), 403
     
     user = User.query.get(user_id)
     if not user:
-        return jsonify({'error': 'ユーザーが見つかりません'}), 404
+        return jsonify({'error': 'User not found'}), 404
     
-    if user.username == "root":
-        return jsonify({'error': 'rootユーザー自身を削除することはできません'}), 400
+    if request.method == 'PUT':
+        data = request.get_json()
+        new_user_id = data.get('username')
+        new_display_name = data.get('display_name')
+        email = data.get('email')
+        password = data.get('password')
 
-    # 関連データの削除（外部キー制約エラーを防ぐため）
-    UserFavorite.query.filter_by(user_id=user_id).delete()
-    Review.query.filter_by(user_id=user_id).delete()
-    EditLog.query.filter_by(user_id=user_id).delete()
-    
-    db.session.delete(user)
-    db.session.commit()
-    return jsonify({'message': 'ユーザーを削除しました'}), 200
+        if new_user_id and new_user_id != user.userID:
+            if user.userID == 'root':
+                return jsonify({'error': 'rootユーザーのユーザーIDは変更できません'}), 400
+            if not re.match(r'^[a-zA-Z0-9._]{4,}$', new_user_id):
+                return jsonify({'error': 'ユーザーIDは4文字以上の半角英数字、ピリオド、アンダーバーのみ使用可能です'}), 400
+            if User.query.filter_by(userID=new_user_id).first():
+                return jsonify({'error': 'このユーザーIDは既に使用されています'}), 400
+            user.userID = new_user_id
+
+        if new_display_name:
+            user.username = new_display_name
+
+        if email and email != user.email:
+            if User.query.filter_by(email=email).first():
+                return jsonify({'error': 'このメールアドレスは既に使用されています'}), 400
+            user.email = email
+
+        if password:
+            user.set_password(password)
+
+        db.session.commit()
+        return jsonify({'message': 'ユーザー情報を更新しました', 'user': {'id': user.id, 'username': user.userID}}), 200
+
+    elif request.method == 'DELETE':
+        if user.userID == "root":
+            return jsonify({'error': 'rootユーザー自身を削除することはできません'}), 400
+
+        # 関連データの削除（外部キー制約エラーを防ぐため）
+        UserFavorite.query.filter_by(user_id=user_id).delete()
+        Review.query.filter_by(user_id=user_id).delete()
+        EditLog.query.filter_by(user_id=user_id).delete()
+        Passkey.query.filter_by(user_id=user_id).delete()
+        
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({'message': 'ユーザーを削除しました'}), 200
 
 # --- Static Files API ---
 

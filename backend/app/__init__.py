@@ -6,7 +6,7 @@ from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from dotenv import load_dotenv
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, inspect
 from flask_mailman import Mail
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -73,24 +73,24 @@ def create_app():
             app.logger.warning(f"MySQL connection failed: {e}. Falling back to SQLite.")
 
     app.config.from_mapping(
+        BASE_URL=os.getenv("BASE_URL"),
+
+        # --- Google Auth Settings ---
+        GOOGLE_CLIENT_ID=os.getenv("GOOGLE_CLIENT_ID"),
+        GOOGLE_CLIENT_SECRET=os.getenv("GOOGLE_CLIENT_SECRET"),
+        GOOGLE_REDIRECT_URI=os.getenv("GOOGLE_REDIRECT_URI"),
+
+        # --- LINE Auth Settings ---
+        LINE_CHANNEL_ID=os.getenv("LINE_CHANNEL_ID"),
+        LINE_CHANNEL_SECRET=os.getenv("LINE_CHANNEL_SECRET"),
+        LINE_REDIRECT_URI=os.getenv("LINE_REDIRECT_URI"),
+
         SQLALCHEMY_DATABASE_URI=mysql_url if use_mysql else sqlite_url,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
 
         SECRET_KEY=os.getenv("SECRET_KEY"),
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_HTTPONLY=True,
-
-        # Google
-        GOOGLE_CLIENT_ID=os.getenv("REACT_APP_GOOGLE_CLIENT_ID"),
-        GOOGLE_CLIENT_SECRET=os.getenv("REACT_APP_GOOGLE_CLIENT_SECRET"),
-        GOOGLE_REDIRECT_URI=os.getenv("REACT_APP_GOOGLE_REDIRECT_URI"),
-
-        # LINE
-        LINE_CHANNEL_ID=os.getenv("REACT_APP_LINE_CHANNEL_ID"),
-        LINE_CHANNEL_SECRET=os.getenv("REACT_APP_LINE_CHANNEL_SECRET"),
-        LINE_REDIRECT_URI=os.getenv("REACT_APP_LINE_REDIRECT_URI"),
-
-        BASE_URL=os.getenv("BASE_URL"),
 
         # Mail Settings
         MAIL_SERVER=os.getenv('MAIL_SERVER', 'smtp.gmail.com'),
@@ -150,12 +150,22 @@ def create_app():
             from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey
             sqlite_engine = create_engine(sqlite_url)
             
+            # 同期するモデルのリスト
+            models = [Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey]
+
+            # スキーマの自動修復（不足カラムの追加）
+            print("SQLiteのスキーマを確認中...")
+            inspector = inspect(sqlite_engine)
+            with sqlite_engine.connect() as conn:
+                for model in models:
+                    if inspector.has_table(model.__tablename__):
+                        print(f"テーブルを削除中（スキーマ更新）: {model.__tablename__}")
+                        conn.execute(text(f"DROP TABLE {model.__tablename__}"))
+                        conn.commit()
+            
             print("SQLiteのスキーマを更新中...")
             db.metadata.create_all(sqlite_engine)
 
-            # 同期するモデルのリスト
-            models = [Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey]
-            
             with sqlite_engine.connect() as sqlite_conn:
                 with sqlite_conn.begin():
                     for model in models:

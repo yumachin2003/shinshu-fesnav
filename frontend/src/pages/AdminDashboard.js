@@ -1,17 +1,18 @@
 import React from 'react';
-import { Container, Title, SimpleGrid, Card, Text, Group, ThemeIcon, Center, Button } from '@mantine/core';
-import { Link } from 'react-router-dom';
-import { IconSettings, IconMessage2, IconLogout, IconUsers } from '@tabler/icons-react';
+import { Container, Title, SimpleGrid, Card, Text, Group, ThemeIcon, Center, Button, useMantineColorScheme } from '@mantine/core';
+import { IconSettings, IconMessage2, IconLogout, IconUsers, IconUserPlus } from '@tabler/icons-react';
 import { useLogout } from '../hooks/useLogout';
+import '../css/GlassStyle.css';
 
 export default function AdminDashboard() {
   const logout = useLogout();
+  const { colorScheme } = useMantineColorScheme();
 
   // ユーザー情報チェック（rootユーザーのみアクセス許可）
   const storedUser = JSON.parse(localStorage.getItem("user"));
-  const isRoot = storedUser && storedUser.username === "root";
+  const isAdmin = storedUser && storedUser.is_admin;
 
-  if (!isRoot) {
+  if (!isAdmin) {
     return (
       <Center style={{ height: '50vh' }}>
         <Text size="xl" fw={700} c="red">閲覧権限がありません</Text>
@@ -41,12 +42,19 @@ export default function AdminDashboard() {
       link: '/admin/info',
       color: 'teal',
     },
+    {
+      title: '管理者アカウントの管理',
+      description: '管理者アカウントの作成や削除を行います。',
+      icon: <IconUserPlus size="2rem" />,
+      link: '/admin/users/add',
+      color: 'grape',
+    },
   ];
 
   return (
     <Container size="lg" py="xl">
       <Group justify="space-between" mb="xl">
-        <Title order={1}>管理者ダッシュボード</Title>
+        <Title order={1} c={colorScheme === 'dark' ? 'white' : 'dark'}>管理者ダッシュボード</Title>
         <Button 
           leftSection={<IconLogout size={16} />} 
           color="red" 
@@ -65,8 +73,9 @@ export default function AdminDashboard() {
             padding="xl"
             radius="md"
             withBorder
-            component={Link}
-            to={module.link}
+            component="a"
+            href={module.link}
+            className="glass-panel"
             style={{ cursor: 'pointer', transition: 'transform 0.2s ease' }}
           >
             <Group>
@@ -74,7 +83,7 @@ export default function AdminDashboard() {
                 {module.icon}
               </ThemeIcon>
               <div>
-                <Text fw={500} size="lg">
+                <Text fw={500} size="lg" c={colorScheme === 'dark' ? 'white' : 'dark'}>
                   {module.title}
                 </Text>
                 <Text size="sm" c="dimmed">

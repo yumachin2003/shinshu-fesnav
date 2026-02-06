@@ -1,7 +1,14 @@
-FROM python:3.12-slim
+FROM python:3.13-slim
 
-# Nginxと環境変数置換用のgettext-baseをインストール
-RUN apt-get update && apt-get install -y nginx gettext-base && rm -rf /var/lib/apt/lists/*
+# Nginx, gcc, python3-dev等をインストール
+RUN apt-get update && apt-get install -y \
+    nginx \
+    gettext-base \
+    gcc \
+    python3-dev \
+    libffi-dev \
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # SIF実行時（非ルートユーザー）でも動作するように権限を調整
 RUN chmod -R 777 /var/log/nginx /var/lib/nginx /run

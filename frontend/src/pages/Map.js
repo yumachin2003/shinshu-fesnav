@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
-import { Link } from 'react-router-dom';
-import { Text, Button, Group, Paper, Title, List, ScrollArea, TextInput, Stack, Divider, Box, CloseButton, ActionIcon, MantineProvider } from '@mantine/core';
+import { Text, Button, Group, Paper, Title, List, ScrollArea, TextInput, Stack, Divider, Box, CloseButton, ActionIcon, useMantineColorScheme } from '@mantine/core';
 import { useMediaQuery, useElementSize } from '@mantine/hooks';
 import { IconCurrentLocation, IconMapPin, IconSearch, IconCar, IconTrain, IconPlus, IconMinus } from '@tabler/icons-react';
 import L from 'leaflet';
 import { getFestivals } from '../utils/apiService';
 import useApiData from '../hooks/useApiData';
+import FestivalDetail from "../components/FestivalDetail";
 import 'leaflet/dist/leaflet.css';
+import '../css/GlassStyle.css';
 
 // 万が一のための初期位置（松本市付近）
 const INITIAL_CENTER = [36.2300, 137.9700];
@@ -68,15 +69,15 @@ function ResizeMap({ sidebarHeight, isResizing }) {
   return null;
 }
 
-function MapControls({ glassStyle, handleCurrentLocation, hasUserLocation }) {
+function MapControls({ handleCurrentLocation, hasUserLocation }) {
   const map = useMap();
   return (
     <Stack gap="xs">
-      <Paper style={{ ...glassStyle, overflow: 'hidden', display: 'flex', flexDirection: 'column', border: glassStyle.border }}>
+      <Paper className="glass-map-control" style={{ display: 'flex', flexDirection: 'column' }}>
         <ActionIcon onClick={() => map.zoomIn()} size="lg" variant="subtle" style={{ borderRadius: 0, borderBottom: '1px solid rgba(128,128,128,0.2)' }} color="gray"><IconPlus size={18} /></ActionIcon>
         <ActionIcon onClick={() => map.zoomOut()} size="lg" variant="subtle" style={{ borderRadius: 0 }} color="gray"><IconMinus size={18} /></ActionIcon>
       </Paper>
-      <Paper style={{ ...glassStyle, overflow: 'hidden', border: glassStyle.border }}>
+      <Paper className="glass-map-control">
         <ActionIcon onClick={handleCurrentLocation} size="lg" variant={hasUserLocation ? "filled" : "subtle"} color={hasUserLocation ? "blue" : "gray"}><IconCurrentLocation size={18} /></ActionIcon>
       </Paper>
     </Stack>
@@ -86,6 +87,7 @@ function MapControls({ glassStyle, handleCurrentLocation, hasUserLocation }) {
 // --- メインコンポーネント ---
 function Map() {
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const { colorScheme } = useMantineColorScheme();
   
   const { data } = useApiData(getFestivals);
   const festivals = data || [];
@@ -97,6 +99,7 @@ function Map() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFestivalId, setSelectedFestivalId] = useState(null);
   const [isResizing, setIsResizing] = useState(false);
+  const [detailOpened, setDetailOpened] = useState(false);
   const [sidebarWidth] = useState(350);
 
   const { ref: sidebarRef } = useElementSize();
@@ -164,15 +167,6 @@ function Map() {
     }
   }, [selectedFestivalId, filteredFestivals]);
 
-  const glassStyle = useMemo(() => ({
-    backgroundColor: 'rgba(20, 21, 23, 0.85)',
-    backdropFilter: 'blur(20px)',
-    WebkitBackdropFilter: 'blur(20px)',
-    border: '1px solid rgba(255, 255, 255, 0.15)',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-    color: '#fff',
-  }), []);
-
   const handleReset = () => {
     setSelectedFestivalId(null);
     setMapCenter(null);
@@ -227,7 +221,6 @@ function Map() {
   }, [isResizing, sidebarHeight, snapPoints]);
 
   return (
-    <MantineProvider forceColorScheme="dark">
     <Box 
       className="festival-map-container" 
       style={{ 
@@ -243,8 +236,6 @@ function Map() {
           .user-location-marker .dot { width: 12px; height: 12px; background-color: #228be6; border: 2px solid white; border-radius: 50%; position: absolute; top: 4px; left: 4px; z-index: 2; }
           .user-location-marker .pulse { width: 20px; height: 20px; background-color: rgba(34, 139, 230, 0.6); border-radius: 50%; position: absolute; top: 0; left: 0; animation: pulse-animation 2s infinite; }
           @keyframes pulse-animation { 0% { transform: scale(0.5); opacity: 1; } 100% { transform: scale(3); opacity: 0; } }
-          .leaflet-popup-content-wrapper { background: rgba(20, 21, 23, 0.85) !important; backdrop-filter: blur(20px) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 12px !important; color: #fff !important; }
-          .leaflet-popup-tip { background: ${glassStyle.backgroundColor} !important; }
           .leaflet-popup-close-button { display: none !important; }
           .sidebar-transition { transition: height 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
           .controls-transition { transition: bottom 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
@@ -273,7 +264,7 @@ function Map() {
               zIndex: 1000 
             }}
           >
-            <MapControls glassStyle={glassStyle} hasUserLocation={!!userLocation} handleCurrentLocation={handleCurrentLocation} />
+            <MapControls hasUserLocation={!!userLocation} handleCurrentLocation={handleCurrentLocation} />
           </div>
 
           <MapRecenter center={mapCenter} />
@@ -302,7 +293,17 @@ function Map() {
                     <Text fw={700} size="sm">{f.name}</Text>
                     <CloseButton size="xs" onClick={(e) => { e.stopPropagation(); handleReset(); }} />
                   </Group>
-                  <Link to={`/festivals/${f.id}`} style={{ textDecoration: 'none' }}><Text c="blue" size="xs">詳細を見る</Text></Link>
+                  <Text 
+                    c="blue" 
+                    size="xs" 
+                    style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                    onClick={() => {
+                      setSelectedFestivalId(f.id);
+                      setDetailOpened(true);
+                    }}
+                  >
+                    詳細を見る
+                  </Text>
                 </Box>
               </Popup>
             </Marker>
@@ -312,18 +313,16 @@ function Map() {
       </Box>
 
       {/* サイドバー本体 */}
-      <Box ref={sidebarRef} className={!isResizing ? 'sidebar-transition' : ''} style={{
+      <Box ref={sidebarRef} className={`glass-sidebar ${!isResizing ? 'sidebar-transition' : ''}`} style={{
         position: 'absolute', bottom: '0', 
         left: isMobile ? '10px' : '20px', 
         right: isMobile ? '10px' : 'auto',
         width: isMobile ? 'auto' : `${sidebarWidth}px`, 
         height: `${sidebarHeight}px`,
-        backgroundColor: glassStyle.backgroundColor, 
-        backdropFilter: glassStyle.backdropFilter, WebkitBackdropFilter: glassStyle.WebkitBackdropFilter,
-        borderRadius: '20px 20px 0 0', border: glassStyle.border, boxShadow: '0 -4px 30px rgba(0, 0, 0, 0.3)',
+        borderRadius: '12px 12px 0 0',
         touchAction: 'none',
         display: 'flex', flexDirection: 'column', 
-        zIndex: 2000, 
+        zIndex: 1000, 
         overflow: 'hidden'
       }}>
         {/* 持ち手 */}
@@ -349,7 +348,7 @@ function Map() {
               {/* 詳細カード */}
               {selectedFestival && (
                 <div ref={cardRef} className="fade-transition">
-                  <Paper shadow="sm" p="md" withBorder style={{ ...glassStyle, position: 'relative', border: '1px solid #444' }}>
+                  <Paper shadow="sm" p="md" withBorder className="glass-map-control" style={{ position: 'relative' }}>
                     <CloseButton onClick={handleReset} style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }} />
                     <Stack gap="xs">
                       <Box pr={30}>
@@ -358,8 +357,7 @@ function Map() {
                         {userLocation && <Text size="xs" c="blue.5" fw={600} mt={4}>現在地から約 {calculateDistance(userLocation[0], userLocation[1], selectedFestival.latitude, selectedFestival.longitude).toFixed(1)} km</Text>}
                       </Box>
                       <Button 
-                        component={Link} 
-                        to={`/festivals/${selectedFestival.id}`} 
+                        onClick={() => setDetailOpened(true)}
                         variant="light" 
                         fullWidth 
                         size="xs"
@@ -414,8 +412,13 @@ function Map() {
           </Stack>
         </ScrollArea>
       </Box>
+
+      <FestivalDetail 
+        festivalData={selectedFestival} 
+        opened={detailOpened} 
+        onClose={() => setDetailOpened(false)} 
+      />
     </Box>
-    </MantineProvider>
   );
 }
 

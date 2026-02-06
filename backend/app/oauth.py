@@ -1,10 +1,11 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, redirect, jsonify, current_app
 import requests
 import jwt
 import datetime
 from .models import User
 from . import db
 from urllib.parse import urlencode
+import re
 
 oauth_bp = Blueprint("oauth", __name__)
 
@@ -12,11 +13,13 @@ oauth_bp = Blueprint("oauth", __name__)
 
 @oauth_bp.route("/google", methods=["GET"])
 def google_login_url():
-    client_id = current_app.config["GOOGLE_CLIENT_ID"]
-    redirect_uri = current_app.config["GOOGLE_REDIRECT_URI"]
+    
+    client_id = current_app.config.get("GOOGLE_CLIENT_ID")
+    redirect_uri = current_app.config.get("GOOGLE_REDIRECT_URI")
+
+    print(f"DEBUG: client_id={client_id}, redirect_uri={redirect_uri}")
 
     scope = "openid email profile"
-
     params = {
         "client_id": client_id,
         "redirect_uri": redirect_uri,
@@ -25,9 +28,15 @@ def google_login_url():
         "access_type": "offline",
         "prompt": "consent",
     }
+    google_auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
+    return redirect(google_auth_url)
 
-    auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urlencode(params)
-    return jsonify({"url": auth_url})
+@oauth_bp.route("/google/callback", methods=["GET"])
+def google_callback():
+    code = request.args.get("code")
+    base_url = current_app.config.get("BASE_URL").rstrip('/')
+    frontend_url = f"{base_url}/login/callback?code={code}&provider=google"
+    return redirect(frontend_url)
 
 @oauth_bp.route("/google", methods=["POST"])
 def google_auth():
@@ -65,24 +74,42 @@ def google_auth():
     if not email:
         return jsonify({"error": "Failed to get email"}), 400
 
-    # ③ ユーザー作成 or 更新
+    # ③ ユーザー作成 or 更新 (アカウント統合)
     user = User.query.filter_by(google_user_id=google_user_id).first()
+    
+    # Google IDで見つからない場合、メールアドレスで既存ユーザーを検索（統合）
     if not user:
-        user = User.query.filter_by(email=email).first() or User.query.filter_by(username=email).first()
+        user = User.query.filter_by(email=email).first()
 
+    # 管理者アカウントはソーシャルログイン禁止
+    if user and user.is_administrator:
+        return jsonify({"error": "管理者アカウントはソーシャルログインを利用できません"}), 403
+
+    # 新規ユーザーの場合は登録フローへ誘導
     if not user:
-        user = User(
-            username=email,
-            email=email,
-            display_name=name,
-            google_user_id=google_user_id,
-        )
-        db.session.add(user)
-    else:
-        user.display_name = name
-        user.email = email
-        if not user.google_user_id:
-            user.google_user_id = google_user_id
+        reg_token = jwt.encode({
+            "provider": "google",
+            "provider_id": google_user_id,
+            "email": email,
+            "name": name,
+            "type": "social_registration",
+            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=15)
+        }, current_app.config["SECRET_KEY"], algorithm="HS256")
+        
+        return jsonify({
+            "action": "register",
+            "registration_token": reg_token,
+            "suggested_username": email.split('@')[0] if email else "",
+            "email": email
+        })
+
+    # 既存ユーザーの更新
+    if not user.google_user_id:
+        user.google_user_id = google_user_id
+    user.username = name
+    user.email = email
+    # 最終ログイン日時を更新
+    user.last_login_at = datetime.datetime.now(datetime.timezone.utc)
 
     db.session.commit()
 
@@ -100,7 +127,7 @@ def google_auth():
 
     return jsonify({
         "token": token,
-        "user": {"id": user.id, "username": user.username, "email": user.email, "display_name": user.display_name}
+        "user": {"id": user.id, "username": user.username, "email": user.email, "display_name": user.display_name, "is_admin": user.is_administrator}
     })
 
 # --- LINE ---
@@ -114,8 +141,15 @@ def line_login_url():
         "state": "LINE_LOGIN",
         "scope": "profile openid email",
     }
-    auth_url = "https://access.line.me/oauth2/v2.1/authorize?" + urlencode(params)
-    return jsonify({"url": auth_url})
+    line_auth_url = "https://access.line.me/oauth2/v2.1/authorize?" + urlencode(params)
+    return redirect(line_auth_url)
+
+@oauth_bp.route("/line/callback", methods=["GET"])
+def line_callback():
+    code = request.args.get("code")
+    base_url = current_app.config.get("BASE_URL").rstrip('/')
+    frontend_url = f"{base_url}/login/callback?code={code}&provider=line"
+    return redirect(frontend_url)
 
 @oauth_bp.route("/line", methods=["POST"])
 def line_auth():
@@ -148,8 +182,9 @@ def line_auth():
             # 署名検証は省略（LINEプラットフォームからの直接レスポンスのため）
             decoded_id_token = jwt.decode(id_token, options={"verify_signature": False})
             email = decoded_id_token.get("email")
-        except Exception:
-            pass
+            print(f"DEBUG: LINE ID Token email: {email}")
+        except Exception as e:
+            print(f"DEBUG: Failed to decode LINE ID token: {e}")
 
     # ② プロフィール取得
     profile = requests.get(
@@ -163,22 +198,42 @@ def line_auth():
     if not line_user_id:
         return jsonify({"error": "Failed to get LINE user id"}), 400
 
-    username = f"line:{line_user_id}"
-
     # ③ ユーザー作成 or 取得
-    user = User.query.filter_by(line_user_id=line_user_id).first() or (User.query.filter_by(email=email).first() if email else None)
-    if not user:
-        user = User(
-            username=username,
-            line_user_id=line_user_id,
-            display_name=display_name,
-            email=email,
-        )
-        db.session.add(user)
+    user = User.query.filter_by(line_user_id=line_user_id).first()
     
-    else:
-        user.display_name = display_name
-        if email: user.email = email
+    # LINE IDで見つからず、メールアドレスがある場合、既存ユーザーを検索（統合）
+    if not user and email:
+        user = User.query.filter_by(email=email).first()
+
+    # 管理者アカウントはソーシャルログイン禁止
+    if user and user.is_administrator:
+        return jsonify({"error": "管理者アカウントはソーシャルログインを利用できません"}), 403
+
+    # 新規ユーザーの場合は登録フローへ誘導
+    if not user:
+        reg_token = jwt.encode({
+            "provider": "line",
+            "provider_id": line_user_id,
+            "email": email,
+            "name": display_name,
+            "type": "social_registration",
+            "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=15)
+        }, current_app.config["SECRET_KEY"], algorithm="HS256")
+        
+        return jsonify({
+            "action": "register",
+            "registration_token": reg_token,
+            "suggested_username": f"line_{line_user_id[:8]}",
+            "email": email
+        })
+
+    # 既存ユーザーの更新
+    if not user.line_user_id:
+        user.line_user_id = line_user_id
+    user.username = display_name or user.username
+    if email: user.email = email
+    # 最終ログイン日時を更新
+    user.last_login_at = datetime.datetime.now(datetime.timezone.utc)
 
     db.session.commit()
 
@@ -187,7 +242,7 @@ def line_auth():
         {
             "user_id": user.id,
             "email": user.email,
-            "display_name": user.display_name,
+            "display_name": user.username,
             "login_type": "line",
             "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7),
         },
@@ -197,5 +252,65 @@ def line_auth():
 
     return jsonify({
         "token": token,
-        "user": {"id": user.id, "username": user.username, "email": user.email, "display_name": user.display_name}
+        "user": {"id": user.id, "username": user.userID, "userID": user.userID, "email": user.email, "display_name": user.username, "is_admin": user.is_administrator}
+    })
+
+@oauth_bp.route("/social-register", methods=["POST"])
+def social_register():
+    data = request.get_json()
+    reg_token = data.get("registration_token")
+    user_id = data.get("username")
+    display_name = data.get("display_name")
+    email = data.get("email")
+
+    if not reg_token or not user_id:
+        return jsonify({"error": "ユーザーIDは必須です"}), 400
+
+    if not re.match(r'^[a-zA-Z0-9._]{4,}$', user_id):
+        return jsonify({'error': 'ユーザーIDは4文字以上の半角英数字、ピリオド、アンダーバーのみ使用可能です'}), 400
+
+    try:
+        payload = jwt.decode(reg_token, current_app.config["SECRET_KEY"], algorithms=["HS256"])
+        if payload.get("type") != "social_registration":
+            raise Exception("Invalid token type")
+    except Exception:
+        return jsonify({"error": "セッションが無効です。もう一度ログインしてください。"}), 400
+
+    # ユーザー名重複チェック
+    if User.query.filter_by(userID=user_id).first():
+        return jsonify({"error": "このユーザーIDは既に使用されています"}), 400
+    
+    # メールアドレス重複チェック（入力された場合）
+    if email:
+        existing = User.query.filter_by(email=email).first()
+        if existing:
+            return jsonify({"error": "このメールアドレスは既に使用されています"}), 400
+
+    user = User(
+        userID=user_id,
+        username=display_name or payload.get("name"),
+        email=email,
+    )
+    
+    if payload["provider"] == "google":
+        user.google_user_id = payload["provider_id"]
+    elif payload["provider"] == "line":
+        user.line_user_id = payload["provider_id"]
+        
+    user.last_login_at = datetime.datetime.now(datetime.timezone.utc)
+    
+    db.session.add(user)
+    db.session.commit()
+
+    # JWT 発行
+    token = jwt.encode({
+        "user_id": user.id,
+        "email": user.email,
+        "display_name": user.username,
+        "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7),
+    }, current_app.config["SECRET_KEY"], algorithm="HS256")
+
+    return jsonify({
+        "token": token,
+        "user": {"id": user.id, "username": user.userID, "userID": user.userID, "email": user.email, "display_name": user.username, "is_admin": user.is_administrator}
     })
