@@ -69,7 +69,7 @@ function AppContent({
   
   const isMapPage = location.pathname === '/map';
   const isLoginCallback = location.pathname === '/login/callback';
-  const isAdmin = user?.username === "root";
+  const isAdmin = user?.is_admin || user?.username === "root";
 
   // 初回アクセス時にデバイスの外観モードを取得・適用・保存
   useEffect(() => {

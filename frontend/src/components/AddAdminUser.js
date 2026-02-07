@@ -42,6 +42,18 @@ export default function AddAdminUser() {
   }, []);
 
   const handleEdit = (user) => {
+    if (currentUser?.username === 'admin_test') {
+      modals.openConfirmModal({
+        title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>権限エラー</Text>,
+        centered: true,
+        overlayProps: { backgroundOpacity: 0.2, blur: 4 },
+        yOffset: '10vh',
+        children: <Text size="sm">プレビュー用の管理者アカウントのためデータの変更はできません</Text>,
+        labels: { confirm: '閉じる' },
+        cancelProps: { display: 'none' },
+      });
+      return;
+    }
     setEditingId(user.id);
     setUsername(user.username);
     setDisplayName(user.display_name || '');
@@ -53,6 +65,18 @@ export default function AddAdminUser() {
   };
 
   const handleAddNew = () => {
+    if (currentUser?.username === 'admin_test') {
+      modals.openConfirmModal({
+        title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>権限エラー</Text>,
+        centered: true,
+        overlayProps: { backgroundOpacity: 0.2, blur: 4 },
+        yOffset: '10vh',
+        children: <Text size="sm">プレビュー用の管理者アカウントのためデータの変更はできません</Text>,
+        labels: { confirm: '閉じる' },
+        cancelProps: { display: 'none' },
+      });
+      return;
+    }
     setEditingId(null);
     setUsername('');
     setDisplayName('');
@@ -110,6 +134,18 @@ export default function AddAdminUser() {
   };
 
   const handleDelete = (user) => {
+    if (currentUser?.username === 'admin_test') {
+      modals.openConfirmModal({
+        title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>権限エラー</Text>,
+        centered: true,
+        overlayProps: { backgroundOpacity: 0.2, blur: 4 },
+        yOffset: '10vh',
+        children: <Text size="sm">プレビュー用の管理者アカウントのためデータの変更はできません</Text>,
+        labels: { confirm: '閉じる' },
+        cancelProps: { display: 'none' },
+      });
+      return;
+    }
     modals.openConfirmModal({
       title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>管理者の削除</Text>,
       centered: true,

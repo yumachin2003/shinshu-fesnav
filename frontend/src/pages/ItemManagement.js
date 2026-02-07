@@ -99,16 +99,46 @@ function ItemManagement() {
   }
 
   const handleEdit = (festival) => {
+    if (storedUser?.username === 'admin_test') {
+      modals.openConfirmModal({
+        title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>権限エラー</Text>,
+        yOffset: '10vh',
+        children: <Text size="sm">プレビュー用の管理者アカウントのためデータの変更はできません</Text>,
+        labels: { confirm: '閉じる' },
+        cancelProps: { display: 'none' },
+      });
+      return;
+    }
     setEditingFestival(festival);
     open();
   };
 
   const handleAddNew = () => {
+    if (storedUser?.username === 'admin_test') {
+      modals.openConfirmModal({
+        title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>権限エラー</Text>,
+        yOffset: '10vh',
+        children: <Text size="sm">プレビュー用の管理者アカウントのためデータの変更はできません</Text>,
+        labels: { confirm: '閉じる' },
+        cancelProps: { display: 'none' },
+      });
+      return;
+    }
     setEditingFestival(null);
     open();
   };
 
   const handleDelete = (id) => {
+    if (storedUser?.username === 'admin_test') {
+      modals.openConfirmModal({
+        title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>権限エラー</Text>,
+        yOffset: '10vh',
+        children: <Text size="sm">プレビュー用の管理者アカウントのためデータの変更はできません</Text>,
+        labels: { confirm: '閉じる' },
+        cancelProps: { display: 'none' },
+      });
+      return;
+    }
     modals.openConfirmModal({
       title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>お祭りの削除</Text>,
       yOffset: '10vh',
@@ -176,6 +206,16 @@ function ItemManagement() {
   };
 
   const handleBulkUpdate2026 = () => {
+    if (storedUser?.username === 'admin_test') {
+      modals.openConfirmModal({
+        title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>権限エラー</Text>,
+        yOffset: '10vh',
+        children: <Text size="sm">プレビュー用の管理者アカウントのためデータの変更はできません</Text>,
+        labels: { confirm: '閉じる' },
+        cancelProps: { display: 'none' },
+      });
+      return;
+    }
     modals.openConfirmModal({
       title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>開催年の一括更新</Text>,
       yOffset: '10vh',

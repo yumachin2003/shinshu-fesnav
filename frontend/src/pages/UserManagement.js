@@ -68,6 +68,17 @@ function UserManagement() {
   }
 
   const handleDelete = (user) => {
+    if (storedUser?.username === 'admin_test') {
+      modals.openConfirmModal({
+        title: '権限エラー',
+        centered: true,
+        overlayProps: { backgroundOpacity: 0.2, blur: 4 },
+        children: <Text size="sm">プレビュー用の管理者アカウントのためデータの変更はできません</Text>,
+        labels: { confirm: '閉じる' },
+        cancelProps: { display: 'none' },
+      });
+      return;
+    }
     modals.openConfirmModal({
       title: 'ユーザーの削除',
       centered: true,
