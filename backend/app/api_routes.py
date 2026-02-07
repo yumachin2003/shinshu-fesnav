@@ -393,6 +393,11 @@ def register():
     user_id = data.get('username') # フロントエンドは 'username' キーでIDを送信
     display_name = data.get('display_name')
     email = data.get('email')
+    
+    # 空文字のメールアドレスはNoneとして扱う（ユニーク制約回避のため）
+    if email == "":
+        email = None
+
     password = data.get('password')
 
     # バリデーションを最初に行う
@@ -409,10 +414,15 @@ def register():
     if email and User.query.filter_by(email=email).first():
         return jsonify({'error': 'このメールアドレスは既に登録されています'}), 400
 
-    new_user = User(userID=user_id, username=display_name, email=email)
-    new_user.set_password(password)
-    db.session.add(new_user)
-    db.session.commit()
+    try:
+        new_user = User(userID=user_id, username=display_name or user_id, email=email)
+        new_user.set_password(password)
+        db.session.add(new_user)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error during registration: {e}")
+        return jsonify({'error': '登録処理中にエラーが発生しました'}), 500
 
     return jsonify({'message': 'ユーザー登録が成功しました'}), 201
 
