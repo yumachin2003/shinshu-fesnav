@@ -270,6 +270,27 @@ function AppInner() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  // URLパラメータにloginまたはregisterが含まれている場合、対応するモーダルを表示
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const newUrl = new URL(window.location);
+    let changed = false;
+
+    if (params.has('login')) {
+      setLoginOpened(true);
+      newUrl.searchParams.delete('login');
+      changed = true;
+    } else if (params.has('register')) {
+      setRegisterOpened(true);
+      newUrl.searchParams.delete('register');
+      changed = true;
+    }
+
+    if (changed) {
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [location.search]);
+
   // ★ テーマ設定 (すりガラスはCSSクラスで管理)
   const theme = {
     defaultRadius: 'md',

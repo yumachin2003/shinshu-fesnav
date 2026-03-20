@@ -105,7 +105,7 @@ export default function SocialLoginButtons({ action = 'login', isPopup = false, 
           fullWidth 
           color="green" 
           size={size} 
-          onClick={() => !connectedStatus?.line && openPopup(`${process.env.REACT_APP_API_BASE_URL}/auth/line`)}
+          onClick={() => !connectedStatus?.line && openPopup(`/api/auth/line`)}
           disabled={connectedStatus?.line}
         >
           <img src={lineLogo} alt="LINE Logo" style={{ width: isPopup ? 14 : 20, height: isPopup ? 14 : 20, marginRight: 8 }} />

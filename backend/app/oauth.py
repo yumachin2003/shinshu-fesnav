@@ -1,4 +1,5 @@
-from flask import Blueprint, request, redirect, jsonify, current_app
+from flask import Blueprint, request, redirect, jsonify, current_app, url_for
+import os
 import requests
 import jwt
 import datetime
@@ -17,6 +18,11 @@ def google_login_url():
     client_id = current_app.config.get("GOOGLE_CLIENT_ID")
     redirect_uri = current_app.config.get("GOOGLE_REDIRECT_URI")
 
+    # ローカル環境の場合は動的にCallback URLを生成
+    if os.getenv("FLASK_ENV") == "development" or "localhost" in request.host or "127.0.0.1" in request.host:
+        redirect_uri = url_for('oauth.google_callback', _external=True)
+        print(f"DEBUG: Google Login URL (Local Mode) -> redirect_uri={redirect_uri}")
+
     print(f"DEBUG: client_id={client_id}, redirect_uri={redirect_uri}")
 
     scope = "openid email profile"
@@ -34,7 +40,13 @@ def google_login_url():
 @oauth_bp.route("/google/callback", methods=["GET"])
 def google_callback():
     code = request.args.get("code")
-    base_url = current_app.config.get("BASE_URL").rstrip('/')
+    
+    # ローカル環境の場合はローカルのフロントエンドへリダイレクト
+    if os.getenv("FLASK_ENV") == "development" or "localhost" in request.host or "127.0.0.1" in request.host:
+        base_url = "http://localhost:3000"
+    else:
+        base_url = current_app.config.get("BASE_URL").rstrip('/')
+
     frontend_url = f"{base_url}/login/callback?code={code}&provider=google"
     return redirect(frontend_url)
 
@@ -45,6 +57,11 @@ def google_auth():
     if not code:
         return jsonify({"error": "No code provided"}), 400
 
+    # ローカル環境の場合は動的にCallback URLを生成
+    redirect_uri = current_app.config["GOOGLE_REDIRECT_URI"]
+    if os.getenv("FLASK_ENV") == "development" or "localhost" in request.host or "127.0.0.1" in request.host:
+        redirect_uri = url_for('oauth.google_callback', _external=True)
+
     # ① code → access_token
     token_res = requests.post(
         "https://oauth2.googleapis.com/token",
@@ -52,7 +69,7 @@ def google_auth():
             "client_id": current_app.config["GOOGLE_CLIENT_ID"],
             "client_secret": current_app.config["GOOGLE_CLIENT_SECRET"],
             "code": code,
-            "redirect_uri": current_app.config["GOOGLE_REDIRECT_URI"],
+            "redirect_uri": redirect_uri,
             "grant_type": "authorization_code",
         },
     ).json()
@@ -134,10 +151,17 @@ def google_auth():
 
 @oauth_bp.route("/line", methods=["GET"])
 def line_login_url():
+    # ローカル環境の場合は動的にCallback URLを生成
+    redirect_uri = current_app.config["LINE_REDIRECT_URI"]
+    print(f"DEBUG: Checking Local Mode. FLASK_ENV={os.getenv('FLASK_ENV')}, Host={request.host}")
+    if os.getenv("FLASK_ENV") == "development" or "localhost" in request.host or "127.0.0.1" in request.host:
+        redirect_uri = url_for('oauth.line_callback', _external=True)
+        print(f"DEBUG: LINE Login URL (Local Mode) -> redirect_uri={redirect_uri}")
+
     params = {
         "response_type": "code",
         "client_id": current_app.config["LINE_CHANNEL_ID"],
-        "redirect_uri": current_app.config["LINE_REDIRECT_URI"],
+        "redirect_uri": redirect_uri,
         "state": "LINE_LOGIN",
         "scope": "profile openid email",
     }
@@ -147,7 +171,13 @@ def line_login_url():
 @oauth_bp.route("/line/callback", methods=["GET"])
 def line_callback():
     code = request.args.get("code")
-    base_url = current_app.config.get("BASE_URL").rstrip('/')
+    
+    # ローカル環境の場合はローカルのフロントエンドへリダイレクト
+    if os.getenv("FLASK_ENV") == "development" or "localhost" in request.host or "127.0.0.1" in request.host:
+        base_url = "http://localhost:3000"
+    else:
+        base_url = current_app.config.get("BASE_URL").rstrip('/')
+
     frontend_url = f"{base_url}/login/callback?code={code}&provider=line"
     return redirect(frontend_url)
 
@@ -158,13 +188,18 @@ def line_auth():
     if not code:
         return jsonify({"error": "No code provided"}), 400
 
+    # ローカル環境の場合は動的にCallback URLを生成（GET時と合わせる）
+    redirect_uri = current_app.config["LINE_REDIRECT_URI"]
+    if os.getenv("FLASK_ENV") == "development" or "localhost" in request.host or "127.0.0.1" in request.host:
+        redirect_uri = url_for('oauth.line_callback', _external=True)
+
     # ① code → access_token
     token_res = requests.post(
         "https://api.line.me/oauth2/v2.1/token",
         data={
             "grant_type": "authorization_code",
             "code": code,
-            "redirect_uri": current_app.config["LINE_REDIRECT_URI"],
+            "redirect_uri": redirect_uri,
             "client_id": current_app.config["LINE_CHANNEL_ID"],
             "client_secret": current_app.config["LINE_CHANNEL_SECRET"],
         },

@@ -74,6 +74,7 @@ def create_app():
 
     app.config.from_mapping(
         BASE_URL=os.getenv("BASE_URL"),
+        FLASK_ENV=os.getenv("FLASK_ENV"),
 
         # --- Google Auth Settings ---
         GOOGLE_CLIENT_ID=os.getenv("GOOGLE_CLIENT_ID"),
