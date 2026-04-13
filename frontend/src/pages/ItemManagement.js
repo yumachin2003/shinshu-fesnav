@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 // API通信ロジックを分離したモジュールをインポート
-import { Container, Title, Table, Alert, Text, Modal, Button, Group, ActionIcon, Paper, useMantineColorScheme, Stack, TextInput, Textarea, Grid } from '@mantine/core';
+import { Container, Title, Table, Alert, Text, Modal, Button, Group, ActionIcon, Paper, useMantineColorScheme, Stack, TextInput, Textarea, Grid, FileInput, Image, Box } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { modals } from '@mantine/modals';
 import { IconEdit, IconTrash, IconPlus, IconMinus, IconChevronUp, IconChevronDown, IconSelector } from '@tabler/icons-react';
-import { getFestivals, deleteFestival, createFestival, updateFestival } from '../utils/apiService';
+import { getFestivals, deleteFestival, createFestival, updateFestival, uploadFestivalPhoto, deleteFestivalPhoto, getImageUrl } from '../utils/apiService';
 import useApiData from '../hooks/useApiData';
 import BackButton from '../utils/BackButton';
 import '../css/GlassStyle.css';
@@ -40,6 +40,10 @@ function ItemManagement() {
   const [attendance, setAttendance] = useState('');
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
+  const [photoFiles, setPhotoFiles] = useState([]); // 複数画像ファイル用の状態
+  const [existingPhotos, setExistingPhotos] = useState([]); // 既に登録されている画像
+  const [deletedPhotoIds, setDeletedPhotoIds] = useState([]); // 削除予定の画像ID
+  const [isSubmitting, setIsSubmitting] = useState(false); // 保存中のローディング状態
   const [formError, setFormError] = useState('');
 
   // Open modal and populate/reset form
@@ -54,6 +58,7 @@ function ItemManagement() {
         setAttendance(editingFestival.attendance || '');
         setLatitude(editingFestival.latitude || '');
         setLongitude(editingFestival.longitude || '');
+        setExistingPhotos(editingFestival.photos || []);
       } else {
         setName('');
         setDate('');
@@ -63,7 +68,10 @@ function ItemManagement() {
         setAttendance('');
         setLatitude('');
         setLongitude('');
+        setExistingPhotos([]);
       }
+      setPhotoFiles([]); // モーダルを開くたびにファイル選択をリセット
+      setDeletedPhotoIds([]); // 削除予定リストもリセット
       setFormError(''); // Clear previous errors
     }
   }, [editingFestival, opened]);
@@ -162,38 +170,89 @@ function ItemManagement() {
     });
   };
 
+  const handleDeleteExistingPhoto = (photoId) => {
+    if (storedUser?.username === 'admin_test') {
+      modals.openConfirmModal({
+        title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>権限エラー</Text>,
+        children: <Text size="sm">プレビュー用アカウントのため削除できません</Text>,
+        labels: { confirm: '閉じる' },
+        cancelProps: { display: 'none' },
+      });
+      return;
+    }
+    // 画面上から非表示にし、削除予定リストに追加する（まだサーバーからは消さない）
+    setExistingPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    setDeletedPhotoIds((prev) => [...prev, photoId]);
+  };
+
+  const handleRemoveNewPhoto = (index) => {
+    // 新しく選択した画像をアップロード対象から外す
+    setPhotoFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async () => {
     if (!name || !location) {
       setFormError('お祭り名と場所は必須です。');
       return;
     }
 
-    const festivalPayload = { 
-      name, 
-      date, 
-      location, 
-      description,
-      access,
-      attendance: attendance || null,
-      latitude: latitude || null,
-      longitude: longitude || null };
+    const performSave = async () => {
+      setIsSubmitting(true); // ローディング開始
 
-    try {
-      if (editingFestival) {
-        await updateFestival(editingFestival.id, festivalPayload);
-      } else {
-        await createFestival(festivalPayload);
+      const festivalPayload = { 
+        name, 
+        date, 
+        location, 
+        description,
+        access,
+        attendance: attendance || null,
+        latitude: latitude || null,
+        longitude: longitude || null };
+
+      try {
+        let festivalId = editingFestival?.id;
+        if (editingFestival) {
+          await updateFestival(editingFestival.id, festivalPayload);
+        } else {
+          const res = await createFestival(festivalPayload);
+          festivalId = res.data.id; // 新規作成時はレスポンスからIDを取得
+        }
+
+        // 保存時に、削除予定の画像があればサーバーから削除
+        if (deletedPhotoIds.length > 0) {
+          await Promise.all(deletedPhotoIds.map((id) => deleteFestivalPhoto(id)));
+        }
+
+        // 画像が選択されていればアップロードを実行
+        if (photoFiles && photoFiles.length > 0 && festivalId) {
+          await Promise.all(photoFiles.map((file) => uploadFestivalPhoto(festivalId, file)));
+        }
+        refetch();
+        close();
+      } catch (err) {
+        modals.openConfirmModal({
+          title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>保存エラー</Text>,
+          yOffset: '10vh',
+          children: <Text size="sm">データの保存に失敗しました: {err.response?.data?.error || err.message}</Text>,
+          labels: { confirm: '閉じる' },
+          cancelProps: { display: 'none' },
+        });
+      } finally {
+        setIsSubmitting(false); // ローディング終了
       }
-      refetch();
-      close();
-    } catch (err) {
+    };
+
+    if (deletedPhotoIds.length > 0) {
       modals.openConfirmModal({
-        title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>保存エラー</Text>,
+        title: <Text c={colorScheme === 'dark' ? 'white' : 'dark'} fw={700}>変更の保存</Text>,
         yOffset: '10vh',
-        children: <Text size="sm">データの保存に失敗しました: {err.response?.data?.error || err.message}</Text>,
-        labels: { confirm: '閉じる' },
-        cancelProps: { display: 'none' },
+        children: <Text size="sm">削除される画像が含まれています。<br />本当に保存してもよろしいですか？</Text>,
+        labels: { confirm: '保存する', cancel: 'キャンセル' },
+        confirmProps: { color: 'red' },
+        onConfirm: performSave,
       });
+    } else {
+      performSave();
     }
   };
 
@@ -334,6 +393,52 @@ function ItemManagement() {
           <Textarea label="詳細" placeholder="お祭りの説明を入力" value={description} onChange={(e) => setDescription(e.target.value)} minRows={4} labelProps={{ style: { color: 'var(--glass-text)' } }} />
           <Textarea label="アクセス" placeholder="アクセス方法" value={access} onChange={(e) => setAccess(e.currentTarget.value)} minRows={2} labelProps={{ style: { color: 'var(--glass-text)' } }} />
           <TextInput label="想定動員数" placeholder="例: 10000" value={attendance} onChange={(e) => setAttendance(e.currentTarget.value)} labelProps={{ style: { color: 'var(--glass-text)' } }} />
+          <FileInput
+            label="お祭りの画像"
+            placeholder="画像ファイルを選択（複数可）"
+            accept="image/png,image/jpeg,image/webp"
+            multiple
+            value={photoFiles}
+            onChange={setPhotoFiles}
+            clearable
+            labelProps={{ style: { color: 'var(--glass-text)' } }}
+          />
+          {/* 画像プレビュー */}
+          {(existingPhotos.length > 0 || photoFiles.length > 0) && (
+            <Grid mt="xs">
+              {existingPhotos.map((photo) => (
+                <Grid.Col span={4} key={`ext-${photo.id}`}>
+                  <Box className="image-preview-container" style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
+                    <Image src={getImageUrl(photo.image_url)} height={100} fit="cover" />
+                    <ActionIcon
+                      className="delete-btn" color="red" variant="filled" size="sm"
+                      style={{ position: 'absolute', top: 4, right: 4 }}
+                      onClick={() => handleDeleteExistingPhoto(photo.id)}
+                    >
+                      <IconTrash size={14} />
+                    </ActionIcon>
+                  </Box>
+                </Grid.Col>
+              ))}
+              {photoFiles.map((file, idx) => {
+                const objectUrl = URL.createObjectURL(file);
+                return (
+                  <Grid.Col span={4} key={`new-${idx}`}>
+                    <Box className="image-preview-container" style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
+                      <Image src={objectUrl} height={100} fit="cover" onLoad={() => URL.revokeObjectURL(objectUrl)} />
+                      <ActionIcon
+                        className="delete-btn" color="red" variant="filled" size="sm"
+                        style={{ position: 'absolute', top: 4, right: 4 }}
+                        onClick={() => handleRemoveNewPhoto(idx)}
+                      >
+                        <IconTrash size={14} />
+                      </ActionIcon>
+                    </Box>
+                  </Grid.Col>
+                );
+              })}
+            </Grid>
+          )}
           <Grid align="flex-end">
             <Grid.Col span={6}><TextInput label="緯度" placeholder="例: 36.6485" value={latitude} onChange={(e) => setLatitude(e.currentTarget.value)} labelProps={{ style: { color: 'var(--glass-text)' } }} /></Grid.Col>
             <Grid.Col span={6}><TextInput label="経度" placeholder="例: 138.1936" value={longitude} onChange={(e) => setLongitude(e.currentTarget.value)} labelProps={{ style: { color: 'var(--glass-text)' } }} /></Grid.Col>
@@ -357,8 +462,8 @@ function ItemManagement() {
             </Grid.Col>
           </Grid>
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={close}>キャンセル</Button>
-            <Button onClick={handleSubmit}>保存</Button>
+            <Button variant="default" onClick={close} disabled={isSubmitting}>キャンセル</Button>
+            <Button onClick={handleSubmit} loading={isSubmitting}>保存</Button>
           </Group>
         </Stack>
       </Modal>

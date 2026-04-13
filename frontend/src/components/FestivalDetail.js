@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import {
   Modal,
   Box,
@@ -20,9 +20,11 @@ import {
   IconEdit,
   IconHeart,
   IconX,
+  IconChevronLeft,
+  IconChevronRight,
 } from "@tabler/icons-react";
 import { UserContext } from "../UserContext";
-import { getAccountData, updateFavorites } from "../utils/apiService";
+import { getAccountData, updateFavorites, getImageUrl } from "../utils/apiService";
 import useApiData from "../hooks/useApiData";
 import AddToCalendarButton from "./AddToICalendarButton";
 import InformationModal from "./InformationModal";
@@ -46,6 +48,7 @@ export default function FestivalDetail({ festivalData, opened, onClose }) {
   const { user, openLogin } = useContext(UserContext);
   const [open, setOpen] = useState(false);
   const [loginModalOpened, setLoginModalOpened] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const { data: accountData, loading: accountLoading, error: accountError } = useApiData(getAccountData, [user?.id]);
 
@@ -54,6 +57,7 @@ export default function FestivalDetail({ festivalData, opened, onClose }) {
 
   useEffect(() => {
     setFestival(festivalData);
+    setCurrentImageIndex(0); // お祭りが切り替わったら画像インデックスをリセット
   }, [festivalData]);
 
   useEffect(() => {
@@ -81,6 +85,23 @@ export default function FestivalDetail({ festivalData, opened, onClose }) {
       }));
     }
     saveFavorites(updated);
+  };
+
+  // スライド用画像の配列を生成
+  const images = useMemo(() => {
+    if (!festival) return [];
+    if (festival.photos && festival.photos.length > 0) {
+      return festival.photos.map((p) => getImageUrl(p.image_url));
+    }
+    const fallbackUrl = festival.image_url ? getImageUrl(festival.image_url) : `https://picsum.photos/seed/${festival.id}/600/400`;
+    return [fallbackUrl];
+  }, [festival]);
+
+  const handlePrevImage = () => {
+    setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  };
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
   };
 
   const isLoading = (user && accountLoading);
@@ -155,7 +176,7 @@ export default function FestivalDetail({ festivalData, opened, onClose }) {
               right: 0,
               bottom: 0,
               zIndex: 0,
-              backgroundImage: `url(${festival.image_url || `https://picsum.photos/seed/${festival.id}/600/400`})`,
+              backgroundImage: `url(${images[currentImageIndex]})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
               filter: "blur(60px) saturate(1.5)",
@@ -168,7 +189,7 @@ export default function FestivalDetail({ festivalData, opened, onClose }) {
           <Box style={{ position: "relative", height: "300px", overflow: "hidden", zIndex: 1 }}>
             {/* 前景：メイン画像 (下だけぼかす) */}
             <Image
-              src={festival.image_url || `https://picsum.photos/seed/${festival.id}/600/400`}
+              src={images[currentImageIndex]}
               alt={festival.name}
               style={{
                 width: "100%", 
@@ -181,6 +202,55 @@ export default function FestivalDetail({ festivalData, opened, onClose }) {
               }}
             />
             
+            {/* 複数画像がある場合のみ左右の矢印とインジケーターを表示 */}
+            {images.length > 1 && (
+              <>
+                <ActionIcon
+                  variant="transparent"
+                  color="gray.3"
+                  onClick={handlePrevImage}
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: 8,
+                    transform: "translateY(-50%)",
+                    backgroundColor: "rgba(0,0,0,0.4)",
+                    borderRadius: "50%",
+                    zIndex: 2,
+                  }}
+                  size="xl"
+                >
+                  <IconChevronLeft size={32} />
+                </ActionIcon>
+                <ActionIcon
+                  variant="transparent"
+                  color="gray.3"
+                  onClick={handleNextImage}
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    right: 8,
+                    transform: "translateY(-50%)",
+                    backgroundColor: "rgba(0,0,0,0.4)",
+                    borderRadius: "50%",
+                    zIndex: 2,
+                  }}
+                  size="xl"
+                >
+                  <IconChevronRight size={32} />
+                </ActionIcon>
+                {/* インジケーター（ドット） */}
+                <Box style={{ position: "absolute", bottom: 40, left: "50%", transform: "translateX(-50%)", display: "flex", gap: 6, zIndex: 2 }}>
+                  {images.map((_, idx) => (
+                    <Box
+                      key={idx}
+                      style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: idx === currentImageIndex ? "white" : "rgba(255,255,255,0.5)", transition: "background-color 0.2s" }}
+                    />
+                  ))}
+                </Box>
+              </>
+            )}
+
             {/* 右上の閉じるボタン (×) */}
             <ActionIcon
               variant="subtle"

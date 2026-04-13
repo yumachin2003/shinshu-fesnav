@@ -344,7 +344,13 @@ def delete_photo(photo_id):
     if not photo:
         return jsonify({'error': 'Photo not found'}), 404
 
-    # ファイルの実体削除はここでは省略（必要ならos.removeを追加）
+    # ファイルの実体削除
+    if photo.image_url:
+        filename = os.path.basename(photo.image_url)
+        file_path = os.path.join(current_app.root_path, 'static', 'uploads', filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
     db.session.delete(photo)
     db.session.commit()
     

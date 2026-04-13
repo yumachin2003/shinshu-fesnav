@@ -46,6 +46,22 @@ export const deleteFestival = (id) => {
   return apiClient.delete(`/festivals/${id}`);
 };
 
+// Festival Photo API (画像アップロード用)
+export const uploadFestivalPhoto = (festivalId, file) => {
+  const formData = new FormData();
+  formData.append('photo', file);
+  return apiClient.post(`/festivals/${festivalId}/photos`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
+// Festival Photo Delete API (画像削除用)
+export const deleteFestivalPhoto = (photoId) => {
+  return apiClient.delete(`/photos/${photoId}`);
+};
+
 // Review API
 export const getReviewsForFestival = (festivalId) => {
   return apiClient.get(`/festivals/${festivalId}/reviews`);
@@ -136,4 +152,12 @@ export const submitInformation = (data) => {
 
 export const getInformationList = () => {
   return apiClient.get("/information");
+};
+
+// 画像のURLを生成する関数（ローカル環境から本番の画像を見るため）
+export const getImageUrl = (url) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url; // 既に絶対URLの場合はそのまま返す
+  const imageBaseUrl = process.env.REACT_APP_IMAGE_BASE_URL || '';
+  return imageBaseUrl + url;
 };

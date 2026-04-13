@@ -2,7 +2,7 @@ import React, { useState, useMemo, useContext, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Title, Text, SimpleGrid, Card, Alert, Select, Group, LoadingOverlay, Box, Image, Badge, Paper, Stack, Grid, Button, useMantineColorScheme, ActionIcon, Modal, Transition, Tooltip } from '@mantine/core';
 import { IconCalendar, IconMapPin, IconHeart, IconFilter, IconX } from '@tabler/icons-react';
-import { getFestivals, getAccountData, updateFavorites } from '../utils/apiService';
+import { getFestivals, getAccountData, updateFavorites, getImageUrl } from '../utils/apiService';
 import useApiData from '../hooks/useApiData'; // useApiDataフックをインポート
 import FestivalDetail from "../components/FestivalDetail";
 import NotFound from "./NotFound";
@@ -243,7 +243,7 @@ export default function Festival() {
             >
               <Card.Section>
                 <Image
-                  src={f.image_url || `https://picsum.photos/seed/${f.id}/400/200`}
+                  src={(f.photos && f.photos.length > 0) ? getImageUrl(f.photos[0].image_url) : (f.image_url ? getImageUrl(f.image_url) : `https://picsum.photos/seed/${f.id}/400/200`)}
                   height={160}
                   alt={f.name}
                 />

@@ -219,6 +219,17 @@
   color: var(--glass-text) !important;
 }
 
+/* --- 画像プレビュー (ホバー時の削除ボタン) --- */
+.image-preview-container .delete-btn {
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  pointer-events: none;
+}
+.image-preview-container:hover .delete-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 /* --- アニメーション --- */
 @keyframes glass-fade-in {
   from { opacity: 0; transform: scale(0.98); }
