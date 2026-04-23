@@ -177,7 +177,8 @@ export default function Calendar() {
               fontSize: '0.75rem', // 文字サイズを小さく
               display: 'flex',
               alignItems: 'center',
-              backgroundColor: 'transparent' // 背景を透明に
+              backgroundColor: 'transparent', // 背景を透明に
+              color: isDark ? '#e0e0e0' : '#1f1f1f' // 外観モードに応じた文字色を設定
             }}
           >
             <span 
@@ -305,6 +306,7 @@ export default function Calendar() {
                 <Text 
                   fw={500}
                   style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  c={isDark ? 'white' : 'dark'}
                   onClick={() => { setDetailId(event.id); setDetailOpened(true); }}
                 >
                   {event.title}
