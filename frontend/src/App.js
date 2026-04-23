@@ -18,6 +18,7 @@ import FestivalDetail from "./components/FestivalDetail";
 import ItemManagement from "./pages/ItemManagement";
 import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
+import SharedFavorites from "./pages/SharedFavorites";
 import AdminDashboard from "./pages/AdminDashboard";
 import './css/App.css'; 
 import './css/GlassStyle.css';
@@ -189,6 +190,7 @@ function AppContent({
         <AuthModal opened={registerOpened} onClose={() => setRegisterOpened(false)} isRegister={true} />
 
         <Routes>
+          <Route path="/shared/:shareId" element={<SharedFavorites />} />
           {isAdmin ? (
             <>
               <Route path="/admin/dashboard" element={<AdminDashboard />} />

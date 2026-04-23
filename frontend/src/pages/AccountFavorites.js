@@ -5,6 +5,7 @@ import { UserContext } from "../UserContext";
 import { getFestivals, getAccountData, updateFavorites, addEditLogToBackend } from "../utils/apiService";
 import useApiData from '../hooks/useApiData';
 import BackButton from "../utils/BackButton";
+import ShareFavoritesButton from "../components/ShareFavoritesButton";
 
 export default function AccountFavorites() {
   const { user } = useContext(UserContext);
@@ -39,19 +40,27 @@ export default function AccountFavorites() {
   if (festivalsLoading || accountLoading) return <Container><Text>データを読み込み中...</Text></Container>;
   if (festivalsError || accountError) return <Container><Alert color="red" title="エラー">データの読み込みに失敗しました</Alert></Container>;
 
+  // お気に入りのお祭りIDのリストを事前に計算
+  const favoriteFestivalIds = Object.entries(favorites)
+    .filter(([_, isFavorite]) => isFavorite)
+    .map(([festivalId]) => Number(festivalId));
+
   return (
     <Container size="lg" py="xl">
       <Group justify="space-between" align="center" mb="xl">
         <Title order={2} c={colorScheme === 'dark' ? 'white' : 'dark'}>お気に入りのお祭り</Title>
-        <BackButton to="/account" variant="outline" />
+        <Group>
+          <ShareFavoritesButton favoriteIds={favoriteFestivalIds} />
+          <BackButton to="/account" variant="outline" />
+        </Group>
       </Group>
 
-      {Object.entries(favorites).filter(([_, v]) => v).length === 0 ? (
+      {favoriteFestivalIds.length === 0 ? (
         <Text c="dimmed" ta="center" py="xl">お気に入りのお祭りはまだありません。</Text>
       ) : (
         <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
-          {Object.entries(favorites).filter(([_, v]) => v).map(([fid]) => {
-            const f = festivals.find(x => x.id === Number(fid));
+          {favoriteFestivalIds.map((fid) => {
+            const f = festivals.find(x => x.id === fid);
             if (!f) return null;
             return (
               <Paper key={fid} withBorder p="md" radius="md" shadow="xs">

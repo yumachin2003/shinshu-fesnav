@@ -148,11 +148,11 @@ def create_app():
             return
 
         try:
-            from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey
+            from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey, SharedFavorite
             sqlite_engine = create_engine(sqlite_url)
             
             # 同期するモデルのリスト
-            models = [Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey]
+            models = [Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey, SharedFavorite]
 
             # スキーマの自動修復（不足カラムの追加）
             print("SQLiteのスキーマを確認中...")

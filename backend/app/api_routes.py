@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app, g, session, send_from_directory, make_response
-from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey, FestivalPhoto
+from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey, FestivalPhoto, SharedFavorite
 from datetime import datetime, timedelta, timezone
 from . import db, mail, limiter
 from .utils import calculate_concrete_date # 日付計算ユーティリティをインポート
@@ -544,6 +544,67 @@ def update_profile():
     return jsonify({
         'message': 'プロフィールを更新しました',
         'user': {'id': user.id, 'username': user.userID, 'userID': user.userID, 'email': user.email, 'display_name': user.username, 'is_admin': user.is_administrator}
+    }), 200
+
+# --- Shared Favorites API ---
+
+@api_bp.route('/favorites/share', methods=['POST'])
+@token_required
+def create_shared_favorite():
+    data = request.get_json()
+    festival_ids = data.get('festival_ids', [])
+    
+    if not festival_ids:
+        return jsonify({'error': 'お祭りが選択されていません'}), 400
+        
+    # 短いランダムなIDを生成 (UUIDの先頭8文字を使用)
+    short_id = uuid.uuid4().hex[:8]
+    
+    # データベースに保存
+    exp_date = datetime.now(timezone.utc) + timedelta(days=30)
+    new_shared = SharedFavorite(
+        share_id=short_id,
+        user_id=g.current_user.id,
+        user_name=g.current_user.username,
+        festival_ids=json.dumps(festival_ids),
+        expires_at=exp_date
+    )
+    db.session.add(new_shared)
+    db.session.commit()
+    
+    # フロントエンドのURLを構築
+    origin = request.headers.get('Origin')
+    if origin:
+        frontend_url = origin
+    else:
+        frontend_url = os.environ.get('FRONTEND_URL', request.host_url.rstrip('/'))
+        if "127.0.0.1:5052" in frontend_url or "localhost:5052" in frontend_url:
+            frontend_url = "http://localhost:3000"
+        
+    share_url = f"{frontend_url}/shared/{short_id}"
+    return jsonify({'shareUrl': share_url, 'shareId': short_id}), 201
+
+@api_bp.route('/favorites/shared/<share_id>', methods=['GET'])
+def get_shared_favorite(share_id):
+    # ディレクトリトラバーサル攻撃対策: 英数字のみ許可
+    if not re.match(r'^[a-zA-Z0-9]+$', share_id):
+        return jsonify({'error': '無効な共有リンクです'}), 400
+
+    # データベースから検索
+    shared = SharedFavorite.query.filter_by(share_id=share_id).first()
+    
+    if not shared:
+        return jsonify({'error': '共有リンクが見つからないか、無効になっています'}), 404
+        
+    # 有効期限のチェック（念のためタイムゾーンを揃えて比較）
+    if datetime.now(timezone.utc) > shared.expires_at.replace(tzinfo=timezone.utc):
+        return jsonify({'error': '共有リンクの有効期限が切れています'}), 400
+        
+    return jsonify({
+        'user_id': shared.user_id,
+        'user_name': shared.user_name,
+        'festival_ids': json.loads(shared.festival_ids),
+        'exp': shared.expires_at.isoformat()
     }), 200
 
 # --- Passkey (WebAuthn) API ---

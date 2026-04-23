@@ -184,3 +184,14 @@ class InformationSubmission(db.Model):
             "created_at": self.created_at.isoformat(),
             "is_checked": self.is_checked,
         }
+
+class SharedFavorite(db.Model):
+    __tablename__ = 'shared_favorites'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    share_id = db.Column(db.String(8), unique=True, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_name = db.Column(db.String(100))
+    festival_ids = db.Column(db.Text, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
