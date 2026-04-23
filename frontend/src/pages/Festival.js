@@ -246,6 +246,7 @@ export default function Festival() {
                   src={(f.photos && f.photos.length > 0) ? getImageUrl(f.photos[0].image_url) : (f.image_url ? getImageUrl(f.image_url) : `https://picsum.photos/seed/${f.id}/400/200`)}
                   height={160}
                   alt={f.name}
+                  loading="lazy"
                 />
               </Card.Section>
 

@@ -409,7 +409,7 @@ function ItemManagement() {
               {existingPhotos.map((photo) => (
                 <Grid.Col span={4} key={`ext-${photo.id}`}>
                   <Box className="image-preview-container" style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
-                    <Image src={getImageUrl(photo.image_url)} height={100} fit="cover" />
+                    <Image src={getImageUrl(photo.image_url)} height={100} fit="cover" loading="lazy" />
                     <ActionIcon
                       className="delete-btn" color="red" variant="filled" size="sm"
                       style={{ position: 'absolute', top: 4, right: 4 }}
@@ -425,7 +425,7 @@ function ItemManagement() {
                 return (
                   <Grid.Col span={4} key={`new-${idx}`}>
                     <Box className="image-preview-container" style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden' }}>
-                      <Image src={objectUrl} height={100} fit="cover" onLoad={() => URL.revokeObjectURL(objectUrl)} />
+                      <Image src={objectUrl} height={100} fit="cover" onLoad={() => URL.revokeObjectURL(objectUrl)} loading="lazy" />
                       <ActionIcon
                         className="delete-btn" color="red" variant="filled" size="sm"
                         style={{ position: 'absolute', top: 4, right: 4 }}

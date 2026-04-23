@@ -149,7 +149,7 @@ export default function SharedFavorites() {
                 {displayFestivals.map((f) => (
                   <Card key={f.id} shadow="sm" padding="lg" radius="md" withBorder style={{ transition: 'transform 0.2s ease, box-shadow 0.2s ease', cursor: 'pointer' }} className="festival-card-hover" onClick={() => setDetailId(f.id)}>
                     <Card.Section>
-                      <Image src={(f.photos && f.photos.length > 0) ? getImageUrl(f.photos[0].image_url) : (f.image_url ? getImageUrl(f.image_url) : `https://picsum.photos/seed/${f.id}/400/200`)} height={160} alt={f.name} />
+                      <Image src={(f.photos && f.photos.length > 0) ? getImageUrl(f.photos[0].image_url) : (f.image_url ? getImageUrl(f.image_url) : `https://picsum.photos/seed/${f.id}/400/200`)} height={160} alt={f.name} loading="lazy" />
                     </Card.Section>
                     <Group justify="space-between" mt="md" mb="xs">
                       <Title order={4} fw={500} c={colorScheme === 'dark' ? 'white' : 'dark'}>{f.name}</Title>
