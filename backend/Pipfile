@@ -26,7 +26,6 @@ pyjwt = "==2.10.1"
 sqlalchemy = "==2.0.44"
 typing-extensions = "==4.15.0"
 werkzeug = "==3.1.3"
-python-dotenv = "*"
 python-dateutil = "*"
 pymysql = "*"
 mysql-connector-python = "*"
@@ -37,6 +36,7 @@ itsdangerous = "*"
 flask-limiter = "*"
 pyopenssl = "*"
 cryptography = "*"
+python-dotenv = "*"
 
 [dev-packages]
 

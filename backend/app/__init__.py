@@ -31,7 +31,7 @@ def create_app():
         "instance_relative_config": True,
     }
     if is_production:
-        app_kwargs['static_folder'] = os.getenv('STATIC_FOLDER', '../../frontend/build')
+        app_kwargs['static_folder'] = os.getenv('STATIC_FOLDER', '../../frontend/dist')
 
     app = Flask(__name__, **app_kwargs)
 
@@ -146,13 +146,13 @@ def create_app():
         if not use_mysql:
             print("エラー: DATABASE_URLが設定されていないか、MySQLに接続できません。")
             return
-
+        
         try:
-            from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey, SharedFavorite
+            from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey, SharedFavorite, SiteSettings
             sqlite_engine = create_engine(sqlite_url)
             
             # 同期するモデルのリスト
-            models = [Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey, SharedFavorite]
+            models = [Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey, SharedFavorite, SiteSettings]
 
             # スキーマの自動修復（不足カラムの追加）
             print("SQLiteのスキーマを確認中...")

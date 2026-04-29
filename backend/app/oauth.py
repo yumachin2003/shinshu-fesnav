@@ -18,11 +18,6 @@ def google_login_url():
     client_id = current_app.config.get("GOOGLE_CLIENT_ID")
     redirect_uri = current_app.config.get("GOOGLE_REDIRECT_URI")
 
-    # ローカル環境の場合は動的にCallback URLを生成
-    if os.getenv("FLASK_ENV") == "development" or "localhost" in request.host or "127.0.0.1" in request.host:
-        redirect_uri = url_for('oauth.google_callback', _external=True)
-        print(f"DEBUG: Google Login URL (Local Mode) -> redirect_uri={redirect_uri}")
-
     print(f"DEBUG: client_id={client_id}, redirect_uri={redirect_uri}")
 
     scope = "openid email profile"
@@ -45,7 +40,7 @@ def google_callback():
     if os.getenv("FLASK_ENV") == "development" or "localhost" in request.host or "127.0.0.1" in request.host:
         base_url = "http://localhost:3000"
     else:
-        base_url = current_app.config.get("BASE_URL").rstrip('/')
+        base_url = (current_app.config.get("BASE_URL") or "https://shinshu-fesnav.sekilab.org").rstrip('/')
 
     frontend_url = f"{base_url}/login/callback?code={code}&provider=google"
     return redirect(frontend_url)
@@ -57,13 +52,9 @@ def google_auth():
     if not code:
         return jsonify({"error": "No code provided"}), 400
 
-    # ローカル環境の場合は動的にCallback URLを生成
     redirect_uri = current_app.config["GOOGLE_REDIRECT_URI"]
-    if os.getenv("FLASK_ENV") == "development" or "localhost" in request.host or "127.0.0.1" in request.host:
-        redirect_uri = url_for('oauth.google_callback', _external=True)
-
     # ① code → access_token
-    token_res = requests.post(
+    token_response = requests.post(
         "https://oauth2.googleapis.com/token",
         data={
             "client_id": current_app.config["GOOGLE_CLIENT_ID"],
@@ -72,11 +63,14 @@ def google_auth():
             "redirect_uri": redirect_uri,
             "grant_type": "authorization_code",
         },
-    ).json()
+    )
+    token_res = token_response.json()
 
     access_token = token_res.get("access_token")
     if not access_token:
-        return jsonify({"error": "Token exchange failed"}), 400
+        error_desc = token_res.get("error_description") or token_res.get("error") or "Unknown error"
+        print(f"🚨 [DEBUG] Google Token Error: {token_res}")
+        return jsonify({"error": f"Google認証エラー: {error_desc}"}), 400
 
     # ② ユーザー情報取得（1回だけ）
     userinfo = requests.get(
@@ -135,7 +129,7 @@ def google_auth():
         {
             "user_id": user.id,
             "email": user.email,
-            "display_name": user.display_name,
+            "display_name": user.username,
             "exp": datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=7),
         },
         current_app.config["SECRET_KEY"],
@@ -144,20 +138,14 @@ def google_auth():
 
     return jsonify({
         "token": token,
-        "user": {"id": user.id, "username": user.username, "email": user.email, "display_name": user.display_name, "is_admin": user.is_administrator}
+        "user": {"id": user.id, "username": user.userID, "userID": user.userID, "email": user.email, "display_name": user.username, "is_admin": user.is_administrator}
     })
 
 # --- LINE ---
 
 @oauth_bp.route("/line", methods=["GET"])
 def line_login_url():
-    # ローカル環境の場合は動的にCallback URLを生成
     redirect_uri = current_app.config["LINE_REDIRECT_URI"]
-    print(f"DEBUG: Checking Local Mode. FLASK_ENV={os.getenv('FLASK_ENV')}, Host={request.host}")
-    if os.getenv("FLASK_ENV") == "development" or "localhost" in request.host or "127.0.0.1" in request.host:
-        redirect_uri = url_for('oauth.line_callback', _external=True)
-        print(f"DEBUG: LINE Login URL (Local Mode) -> redirect_uri={redirect_uri}")
-
     params = {
         "response_type": "code",
         "client_id": current_app.config["LINE_CHANNEL_ID"],
@@ -176,7 +164,7 @@ def line_callback():
     if os.getenv("FLASK_ENV") == "development" or "localhost" in request.host or "127.0.0.1" in request.host:
         base_url = "http://localhost:3000"
     else:
-        base_url = current_app.config.get("BASE_URL").rstrip('/')
+        base_url = (current_app.config.get("BASE_URL") or "https://shinshu-fesnav.sekilab.org").rstrip('/')
 
     frontend_url = f"{base_url}/login/callback?code={code}&provider=line"
     return redirect(frontend_url)
@@ -188,13 +176,9 @@ def line_auth():
     if not code:
         return jsonify({"error": "No code provided"}), 400
 
-    # ローカル環境の場合は動的にCallback URLを生成（GET時と合わせる）
     redirect_uri = current_app.config["LINE_REDIRECT_URI"]
-    if os.getenv("FLASK_ENV") == "development" or "localhost" in request.host or "127.0.0.1" in request.host:
-        redirect_uri = url_for('oauth.line_callback', _external=True)
-
     # ① code → access_token
-    token_res = requests.post(
+    token_response = requests.post(
         "https://api.line.me/oauth2/v2.1/token",
         data={
             "grant_type": "authorization_code",
@@ -203,12 +187,15 @@ def line_auth():
             "client_id": current_app.config["LINE_CHANNEL_ID"],
             "client_secret": current_app.config["LINE_CHANNEL_SECRET"],
         },
-    ).json()
+    )
+    token_res = token_response.json()
 
     access_token = token_res.get("access_token")
     id_token = token_res.get("id_token")
     if not access_token:
-        return jsonify({"error": "LINE token exchange failed"}), 400
+        error_desc = token_res.get("error_description") or token_res.get("error") or "Unknown error"
+        print(f"🚨 [DEBUG] LINE Token Error: {token_res}")
+        return jsonify({"error": f"LINE認証エラー: {error_desc}"}), 400
 
     # IDトークンからメールアドレスを取得
     email = None

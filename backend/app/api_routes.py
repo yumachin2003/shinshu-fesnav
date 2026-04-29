@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify, current_app, g, session, send_from_directory, make_response
-from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey, FestivalPhoto, SharedFavorite
+from .models import Festivals, User, UserFavorite, EditLog, Review, InformationSubmission, Passkey, FestivalPhoto, SharedFavorite, SiteSettings
 from datetime import datetime, timedelta, timezone
 from . import db, mail, limiter
 from .utils import calculate_concrete_date # 日付計算ユーティリティをインポート
@@ -1055,6 +1055,40 @@ def manage_admin_user(user_id):
         db.session.commit()
         return jsonify({'message': 'ユーザーを削除しました'}), 200
 
+# --- Admin Settings API ---
+
+@api_bp.route('/admin/settings', methods=['GET'])
+def get_site_settings():
+    # Settings are stored in a single row, get it or create a default one.
+    settings = SiteSettings.query.first()
+    if not settings:
+        settings = SiteSettings()
+        db.session.add(settings)
+        db.session.commit()
+    return jsonify(settings.to_dict())
+
+@api_bp.route('/admin/settings', methods=['POST'])
+@token_required
+def update_site_settings():
+    if not g.current_user.is_administrator:
+        return jsonify({'error': '権限がありません'}), 403
+
+    data = request.get_json()
+    
+    settings = SiteSettings.query.first()
+    if not settings:
+        settings = SiteSettings()
+        db.session.add(settings)
+
+    # フロントエンドからのキー名 'googleLogin', 'lineLogin' に合わせる
+    if 'googleLogin' in data:
+        settings.google_login_enabled = data['googleLogin']
+    if 'lineLogin' in data:
+        settings.line_login_enabled = data['lineLogin']
+    
+    db.session.commit()
+    
+    return jsonify({'message': '設定を更新しました'}), 200
 # --- Static Files API ---
 
 @api_bp.route('/uploads/<filename>')

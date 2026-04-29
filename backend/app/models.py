@@ -195,3 +195,18 @@ class SharedFavorite(db.Model):
     festival_ids = db.Column(db.Text, nullable=False)
     expires_at = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class SiteSettings(db.Model):
+    __tablename__ = 'site_settings'
+    
+    id = db.Column(db.Integer, primary_key=True) # Should only be one row with id=1
+    google_login_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    line_login_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            # Match the frontend's expectation (camelCase)
+            'googleLogin': self.google_login_enabled,
+            'lineLogin': self.line_login_enabled,
+        }
